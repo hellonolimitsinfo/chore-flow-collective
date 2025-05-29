@@ -26,10 +26,13 @@ export const useHouseholds = () => {
     try {
       setLoading(true);
       
-      // First, fetch households the user is a member of
+      // Fetch households with member details using the fixed RLS policies
       const { data: householdsData, error: householdsError } = await supabase
         .from('households')
-        .select('*');
+        .select(`
+          *,
+          household_members(user_id, role)
+        `);
 
       if (householdsError) {
         console.error('Error fetching households:', householdsError);
@@ -37,36 +40,21 @@ export const useHouseholds = () => {
         return;
       }
 
-      // Then, fetch household members for each household to get member count and user role
-      const householdsWithDetails = await Promise.all(
-        (householdsData || []).map(async (household) => {
-          const { data: membersData, error: membersError } = await supabase
-            .from('household_members')
-            .select('user_id, role')
-            .eq('household_id', household.id);
+      // Process the data to get member count and user role
+      const processedHouseholds = (householdsData || []).map(household => {
+        const members = household.household_members || [];
+        const memberCount = members.length;
+        const userMember = members.find(member => member.user_id === user.id);
+        const userRole = userMember?.role || 'member';
 
-          if (membersError) {
-            console.error('Error fetching members for household:', household.id, membersError);
-            return {
-              ...household,
-              member_count: 0,
-              user_role: 'member'
-            };
-          }
+        return {
+          ...household,
+          member_count: memberCount,
+          user_role: userRole
+        };
+      });
 
-          const memberCount = membersData?.length || 0;
-          const userMember = membersData?.find(member => member.user_id === user.id);
-          const userRole = userMember?.role || 'member';
-
-          return {
-            ...household,
-            member_count: memberCount,
-            user_role: userRole
-          };
-        })
-      );
-
-      setHouseholds(householdsWithDetails);
+      setHouseholds(processedHouseholds);
     } catch (error) {
       console.error('Error fetching households:', error);
       toast.error('Failed to fetch households');
