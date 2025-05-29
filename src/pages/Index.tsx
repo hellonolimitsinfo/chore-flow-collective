@@ -1,24 +1,52 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Home, Users, Calendar, Settings } from "lucide-react";
+import { Plus, Home } from "lucide-react";
 import { HouseholdCard } from "@/components/HouseholdCard";
 import { UrgentItems } from "@/components/UrgentItems";
 import { ChoresSection } from "@/components/ChoresSection";
 import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { UserMenu } from "@/components/UserMenu";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const [user] = useState({ name: "hellonolimitsinfo", email: "user@example.com" });
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [households] = useState([
     { id: 1, name: "Main House", memberCount: 3 }
   ]);
   const [selectedHousehold, setSelectedHousehold] = useState(households[0]);
   const [showCreateHousehold, setShowCreateHousehold] = useState(false);
   const [newHouseholdName, setNewHouseholdName] = useState("");
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+      return;
+    }
+
+    if (user) {
+      // Fetch user profile
+      const fetchProfile = async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setUserProfile(data);
+        }
+      };
+      fetchProfile();
+    }
+  }, [user, loading, navigate]);
 
   const handleCreateHousehold = () => {
     if (newHouseholdName.trim()) {
@@ -27,6 +55,18 @@ const Index = () => {
       setShowCreateHousehold(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // This will redirect to auth in useEffect
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -43,7 +83,10 @@ const Index = () => {
                 <p className="text-slate-400 text-sm">Keep track of chores, shopping, and responsibilities</p>
               </div>
             </div>
-            <UserMenu user={user} />
+            <UserMenu user={{ 
+              name: userProfile?.full_name || user.email?.split('@')[0] || 'User',
+              email: user.email || '' 
+            }} />
           </div>
         </div>
       </header>

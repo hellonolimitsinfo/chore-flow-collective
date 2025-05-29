@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface UserMenuProps {
   user: {
@@ -19,10 +21,20 @@ interface UserMenuProps {
 
 export const UserMenu = ({ user }: UserMenuProps) => {
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const { signOut } = useAuth();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Successfully signed out");
+    } catch (error) {
+      toast.error("Error signing out");
+    }
   };
 
   return (
@@ -51,7 +63,10 @@ export const UserMenu = ({ user }: UserMenuProps) => {
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-slate-700" />
-        <DropdownMenuItem className="text-red-400 hover:bg-slate-700 cursor-pointer">
+        <DropdownMenuItem 
+          onClick={handleSignOut}
+          className="text-red-400 hover:bg-slate-700 cursor-pointer"
+        >
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out
         </DropdownMenuItem>
