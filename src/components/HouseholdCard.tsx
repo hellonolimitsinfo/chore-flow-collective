@@ -4,18 +4,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 interface Household {
-  id: number;
+  id: string;
   name: string;
-  memberCount: number;
+  description?: string;
+  member_count?: number;
+  user_role?: string;
 }
 
 interface HouseholdCardProps {
   household: Household;
   isSelected: boolean;
   onSelect: () => void;
+  onDelete?: (householdId: string) => void;
 }
 
-export const HouseholdCard = ({ household, isSelected, onSelect }: HouseholdCardProps) => {
+export const HouseholdCard = ({ household, isSelected, onSelect, onDelete }: HouseholdCardProps) => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete && window.confirm(`Are you sure you want to delete "${household.name}"?`)) {
+      onDelete(household.id);
+    }
+  };
+
+  const canDelete = household.user_role === 'admin';
+
   return (
     <Card 
       className={`cursor-pointer transition-all duration-200 hover:scale-105 ${
@@ -27,19 +39,34 @@ export const HouseholdCard = ({ household, isSelected, onSelect }: HouseholdCard
     >
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">{household.name}</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-white">{household.name}</h3>
+            {household.description && (
+              <p className="text-sm text-slate-400 mt-1">{household.description}</p>
+            )}
+          </div>
           <div className="flex space-x-1">
             <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white">
               <Settings className="w-4 h-4" />
             </Button>
-            <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300">
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {canDelete && (
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={handleDelete}
+                className="text-red-400 hover:text-red-300"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
         <div className="flex items-center text-slate-400">
           <Users className="w-4 h-4 mr-2" />
-          <span>{household.memberCount} members</span>
+          <span>{household.member_count || 0} members</span>
+          {household.user_role === 'admin' && (
+            <span className="ml-2 px-2 py-1 text-xs bg-blue-600 text-white rounded">Admin</span>
+          )}
         </div>
       </CardContent>
     </Card>
