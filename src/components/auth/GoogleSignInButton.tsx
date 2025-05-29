@@ -15,7 +15,7 @@ const GoogleSignInButton = ({ loading, setLoading }: GoogleSignInButtonProps) =>
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: 'https://chore-flow-collective.lovable.app'
         }
       });
 
