@@ -1,0 +1,71 @@
+
+import { DollarSign, Plus, MoreHorizontal } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+export const ExpensesSection = () => {
+  const expenses = [
+    {
+      id: 1,
+      title: "Groceries",
+      amount: "$45.50",
+      paidBy: "Alex",
+      split: "All members",
+      details: "Sam owes £15.17\nJordan owes £15.17",
+      bankDetails: "Alex Bank - 123456790"
+    },
+    {
+      id: 2,
+      title: "Internet Bill",
+      amount: "$60.00",
+      paidBy: "Sam",
+      split: "All members",
+      details: "Alex owes £20.00\nJordan owes £20.00",
+      bankDetails: "Sam Bank - 098765432"
+    }
+  ];
+
+  return (
+    <Card className="bg-slate-800 border-slate-700">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center text-white">
+          <DollarSign className="w-5 h-5 mr-2" />
+          Expenses
+        </CardTitle>
+        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="w-4 h-4 mr-1" />
+          Add Expense
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {expenses.map((expense) => (
+          <div key={expense.id} className="p-3 bg-slate-700/50 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-white">{expense.title}</h4>
+              <div className="flex items-center space-x-2">
+                <span className="text-green-400 font-semibold">{expense.amount}</span>
+                <Button size="sm" variant="ghost" className="text-slate-400">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1 text-sm">
+              <p className="text-slate-300">
+                <span className="text-slate-400">Paid by:</span> {expense.paidBy}
+              </p>
+              <p className="text-slate-300">
+                <span className="text-slate-400">Split:</span> {expense.split}
+              </p>
+              <div className="text-orange-400 whitespace-pre-line">
+                {expense.details}
+              </div>
+              <p className="text-slate-500 text-xs">
+                <span className="text-slate-400">Bank:</span> {expense.bankDetails}
+              </p>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+};
