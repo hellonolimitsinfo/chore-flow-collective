@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,15 +25,11 @@ export const useHouseholds = () => {
 
     try {
       setLoading(true);
-      console.log('Fetching households for user:', user.id);
       
-      // Fetch households with member details using the fixed RLS policies
+      // First, fetch households the user is a member of
       const { data: householdsData, error: householdsError } = await supabase
         .from('households')
-        .select(`
-          *,
-          household_members(user_id, role)
-        `);
+        .select('*');
 
       if (householdsError) {
         console.error('Error fetching households:', householdsError);
@@ -40,24 +37,36 @@ export const useHouseholds = () => {
         return;
       }
 
-      console.log('Fetched households data:', householdsData);
+      // Then, fetch household members for each household to get member count and user role
+      const householdsWithDetails = await Promise.all(
+        (householdsData || []).map(async (household) => {
+          const { data: membersData, error: membersError } = await supabase
+            .from('household_members')
+            .select('user_id, role')
+            .eq('household_id', household.id);
 
-      // Process the data to get member count and user role
-      const processedHouseholds = (householdsData || []).map(household => {
-        const members = household.household_members || [];
-        const memberCount = members.length;
-        const userMember = members.find(member => member.user_id === user.id);
-        const userRole = userMember?.role || 'member';
+          if (membersError) {
+            console.error('Error fetching members for household:', household.id, membersError);
+            return {
+              ...household,
+              member_count: 0,
+              user_role: 'member'
+            };
+          }
 
-        return {
-          ...household,
-          member_count: memberCount,
-          user_role: userRole
-        };
-      });
+          const memberCount = membersData?.length || 0;
+          const userMember = membersData?.find(member => member.user_id === user.id);
+          const userRole = userMember?.role || 'member';
 
-      console.log('Processed households:', processedHouseholds);
-      setHouseholds(processedHouseholds);
+          return {
+            ...household,
+            member_count: memberCount,
+            user_role: userRole
+          };
+        })
+      );
+
+      setHouseholds(householdsWithDetails);
     } catch (error) {
       console.error('Error fetching households:', error);
       toast.error('Failed to fetch households');
@@ -67,15 +76,9 @@ export const useHouseholds = () => {
   };
 
   const createHousehold = async (name: string, description?: string) => {
-    if (!user) {
-      console.error('No user found when trying to create household');
-      return null;
-    }
+    if (!user) return null;
 
     try {
-      console.log('Creating household with user ID:', user.id);
-      console.log('Household data:', { name, description });
-      
       const { data, error } = await supabase
         .from('households')
         .insert({
@@ -88,11 +91,10 @@ export const useHouseholds = () => {
 
       if (error) {
         console.error('Error creating household:', error);
-        toast.error(`Failed to create household: ${error.message}`);
+        toast.error('Failed to create household');
         return null;
       }
 
-      console.log('Successfully created household:', data);
       toast.success('Household created successfully!');
       fetchHouseholds(); // Refresh the list
       return data;
