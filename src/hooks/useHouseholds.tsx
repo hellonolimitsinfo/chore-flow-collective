@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +24,7 @@ export const useHouseholds = () => {
 
     try {
       setLoading(true);
+      console.log('Fetching households for user:', user.id);
       
       // Fetch households with member details using the fixed RLS policies
       const { data: householdsData, error: householdsError } = await supabase
@@ -40,6 +40,8 @@ export const useHouseholds = () => {
         return;
       }
 
+      console.log('Fetched households data:', householdsData);
+
       // Process the data to get member count and user role
       const processedHouseholds = (householdsData || []).map(household => {
         const members = household.household_members || [];
@@ -54,6 +56,7 @@ export const useHouseholds = () => {
         };
       });
 
+      console.log('Processed households:', processedHouseholds);
       setHouseholds(processedHouseholds);
     } catch (error) {
       console.error('Error fetching households:', error);
@@ -64,9 +67,15 @@ export const useHouseholds = () => {
   };
 
   const createHousehold = async (name: string, description?: string) => {
-    if (!user) return null;
+    if (!user) {
+      console.error('No user found when trying to create household');
+      return null;
+    }
 
     try {
+      console.log('Creating household with user ID:', user.id);
+      console.log('Household data:', { name, description });
+      
       const { data, error } = await supabase
         .from('households')
         .insert({
@@ -79,10 +88,11 @@ export const useHouseholds = () => {
 
       if (error) {
         console.error('Error creating household:', error);
-        toast.error('Failed to create household');
+        toast.error(`Failed to create household: ${error.message}`);
         return null;
       }
 
+      console.log('Successfully created household:', data);
       toast.success('Household created successfully!');
       fetchHouseholds(); // Refresh the list
       return data;
