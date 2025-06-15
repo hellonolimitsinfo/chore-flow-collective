@@ -21,12 +21,17 @@ export const useHouseholds = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchHouseholds = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping household fetch');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('Fetching households for user:', user.id);
       
-      // First, fetch households the user is a member of
+      // Fetch households the user is a member of (RLS will filter automatically)
       const { data: householdsData, error: householdsError } = await supabase
         .from('households')
         .select('*');
@@ -37,7 +42,9 @@ export const useHouseholds = () => {
         return;
       }
 
-      // Then, fetch household members for each household to get member count and user role
+      console.log('Fetched households:', householdsData);
+
+      // Fetch household members for each household to get member count and user role
       const householdsWithDetails = await Promise.all(
         (householdsData || []).map(async (household) => {
           const { data: membersData, error: membersError } = await supabase
@@ -76,10 +83,17 @@ export const useHouseholds = () => {
   };
 
   const createHousehold = async (name: string, description?: string) => {
-    if (!user) return null;
+    if (!user) {
+      console.error('No user found, cannot create household');
+      toast.error('You must be logged in to create a household');
+      return null;
+    }
 
     try {
-      const { data, error } = await supabase
+      console.log('Creating household with user:', user.id);
+      
+      // Create the household
+      const { data: householdData, error: householdError } = await supabase
         .from('households')
         .insert({
           name,
@@ -89,15 +103,39 @@ export const useHouseholds = () => {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating household:', error);
+      if (householdError) {
+        console.error('Error creating household:', householdError);
         toast.error('Failed to create household');
         return null;
       }
 
+      console.log('Created household:', householdData);
+
+      // Add the creator as an admin member
+      const { error: memberError } = await supabase
+        .from('household_members')
+        .insert({
+          household_id: householdData.id,
+          user_id: user.id,
+          role: 'admin'
+        });
+
+      if (memberError) {
+        console.error('Error adding user as household member:', memberError);
+        // Try to clean up the household if member creation failed
+        await supabase
+          .from('households')
+          .delete()
+          .eq('id', householdData.id);
+        
+        toast.error('Failed to create household membership');
+        return null;
+      }
+
+      console.log('Successfully added user as admin member');
       toast.success('Household created successfully!');
       fetchHouseholds(); // Refresh the list
-      return data;
+      return householdData;
     } catch (error) {
       console.error('Error creating household:', error);
       toast.error('Failed to create household');
@@ -106,7 +144,14 @@ export const useHouseholds = () => {
   };
 
   const deleteHousehold = async (householdId: string) => {
+    if (!user) {
+      console.error('No user found, cannot delete household');
+      return false;
+    }
+
     try {
+      console.log('Deleting household:', householdId);
+      
       const { error } = await supabase
         .from('households')
         .delete()
@@ -118,6 +163,7 @@ export const useHouseholds = () => {
         return false;
       }
 
+      console.log('Successfully deleted household');
       toast.success('Household deleted successfully!');
       fetchHouseholds(); // Refresh the list
       return true;
