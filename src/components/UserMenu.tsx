@@ -8,8 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { toast } from "sonner";
 
 interface UserMenuProps {
@@ -20,13 +20,8 @@ interface UserMenuProps {
 }
 
 export const UserMenu = ({ user }: UserMenuProps) => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { theme, toggleTheme } = useTheme();
   const { signOut } = useAuth();
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const handleSignOut = async () => {
     try {
@@ -55,8 +50,8 @@ export const UserMenu = ({ user }: UserMenuProps) => {
           onClick={toggleTheme}
           className="text-slate-200 hover:bg-slate-700 cursor-pointer"
         >
-          {isDarkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-          {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+          {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </DropdownMenuItem>
         <DropdownMenuItem className="text-slate-200 hover:bg-slate-700 cursor-pointer">
           <Settings className="w-4 h-4 mr-2" />

@@ -6,17 +6,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+const AppContent = () => {
+  const { theme } = useTheme();
+
   useEffect(() => {
-    // Set dark mode by default
-    document.documentElement.classList.add('dark');
-  }, []);
+    // Apply the current theme on app load
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -35,6 +43,10 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
+};
+
+const App = () => {
+  return <AppContent />;
 };
 
 export default App;
