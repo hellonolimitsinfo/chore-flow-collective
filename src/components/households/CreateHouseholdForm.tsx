@@ -33,7 +33,7 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
   };
 
   return (
-    <Card className={theme === 'light' ? 'bg-white border-[#ddd] shadow-sm' : 'bg-slate-800 border-slate-700'}>
+    <Card className={theme === 'light' ? 'light-card' : 'bg-slate-800 border-slate-700'}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className={theme === 'light' ? 'text-[#111111]' : 'text-white'}>Create New Household</CardTitle>
@@ -90,7 +90,7 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
               variant="outline" 
               onClick={onCancel}
               className={theme === 'light' 
-                ? 'border-[#ddd] text-[#333333] hover:bg-gray-50' 
+                ? 'bg-white border-[#ddd] text-[#333333] hover:bg-gray-50' 
                 : 'border-slate-600 text-slate-300 hover:bg-slate-700'
               }
             >

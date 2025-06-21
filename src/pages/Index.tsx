@@ -72,8 +72,10 @@ const Index = () => {
 
   if (authLoading || householdsLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        theme === 'light' ? 'bg-[#f5f5f5]' : 'bg-background'
+      }`}>
+        <div className={theme === 'light' ? 'text-[#333333]' : 'text-foreground'}>Loading...</div>
       </div>
     );
   }
