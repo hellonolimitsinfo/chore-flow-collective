@@ -70,8 +70,8 @@ const Index = () => {
 
   if (authLoading || householdsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading...</div>
       </div>
     );
   }
@@ -81,9 +81,9 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted text-foreground">
       {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -91,8 +91,8 @@ const Index = () => {
                 <Home className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Flatmate Flow</h1>
-                <p className="text-slate-400 text-sm">Keep track of chores, shopping, and responsibilities</p>
+                <h1 className="text-2xl font-bold text-foreground">Flatmate Flow</h1>
+                <p className="text-muted-foreground text-sm">Keep track of chores, shopping, and responsibilities</p>
               </div>
             </div>
             <UserMenu user={{ 
@@ -115,11 +115,11 @@ const Index = () => {
         {/* Household Management */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Your Households</h2>
+            <h2 className="text-xl font-semibold text-foreground">Your Households</h2>
             {!showCreateHousehold && (
               <Button 
                 onClick={() => setShowCreateHousehold(true)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Household
@@ -142,10 +142,10 @@ const Index = () => {
           ) : (
             !showCreateHousehold && (
               <div className="text-center py-8">
-                <p className="text-slate-400 mb-4">You haven't joined any households yet.</p>
+                <p className="text-muted-foreground mb-4">You haven't joined any households yet.</p>
                 <Button 
                   onClick={() => setShowCreateHousehold(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Household
@@ -158,8 +158,8 @@ const Index = () => {
         {/* Main Dashboard */}
         {selectedHousehold && (
           <>
-            <div className="border-t border-slate-700 pt-6">
-              <h3 className="text-lg font-medium text-white mb-4">
+            <div className="border-t border-border pt-6">
+              <h3 className="text-lg font-medium text-foreground mb-4">
                 Managing: {selectedHousehold.name}
               </h3>
             </div>

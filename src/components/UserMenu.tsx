@@ -35,32 +35,32 @@ export const UserMenu = ({ user }: UserMenuProps) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-slate-700">
+        <Button variant="ghost" className="flex items-center space-x-2 text-foreground hover:bg-accent">
           <User className="w-4 h-4" />
           <span>{user.name}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 bg-slate-800 border-slate-700">
+      <DropdownMenuContent align="end" className="w-56">
         <div className="px-3 py-2 text-sm">
-          <p className="text-white font-medium">{user.name}</p>
-          <p className="text-slate-400">{user.email}</p>
+          <p className="text-foreground font-medium">{user.name}</p>
+          <p className="text-muted-foreground">{user.email}</p>
         </div>
-        <DropdownMenuSeparator className="bg-slate-700" />
+        <DropdownMenuSeparator />
         <DropdownMenuItem 
           onClick={toggleTheme}
-          className="text-slate-200 hover:bg-slate-700 cursor-pointer"
+          className="cursor-pointer"
         >
           {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
           {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-slate-200 hover:bg-slate-700 cursor-pointer">
+        <DropdownMenuItem className="cursor-pointer">
           <Settings className="w-4 h-4 mr-2" />
           Settings
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="bg-slate-700" />
+        <DropdownMenuSeparator />
         <DropdownMenuItem 
           onClick={handleSignOut}
-          className="text-red-400 hover:bg-slate-700 cursor-pointer"
+          className="text-destructive hover:text-destructive cursor-pointer"
         >
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out
