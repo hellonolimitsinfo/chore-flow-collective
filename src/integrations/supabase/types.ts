@@ -104,6 +104,10 @@ export type Database = {
         Args: { hid: string }
         Returns: boolean
       }
+      is_member_of: {
+        Args: { target_household: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
