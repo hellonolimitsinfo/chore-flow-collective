@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -92,7 +91,7 @@ export const useHouseholds = () => {
     try {
       console.log('Creating household with user:', user.id);
       
-      // Create the household
+      // Create the household - the database trigger will automatically add the creator as an admin member
       const { data: householdData, error: householdError } = await supabase
         .from('households')
         .insert({
@@ -110,29 +109,6 @@ export const useHouseholds = () => {
       }
 
       console.log('Created household:', householdData);
-
-      // Add the creator as an admin member
-      const { error: memberError } = await supabase
-        .from('household_members')
-        .insert({
-          household_id: householdData.id,
-          user_id: user.id,
-          role: 'admin'
-        });
-
-      if (memberError) {
-        console.error('Error adding user as household member:', memberError);
-        // Try to clean up the household if member creation failed
-        await supabase
-          .from('households')
-          .delete()
-          .eq('id', householdData.id);
-        
-        toast.error('Failed to create household membership');
-        return null;
-      }
-
-      console.log('Successfully added user as admin member');
       toast.success('Household created successfully!');
       fetchHouseholds(); // Refresh the list
       return householdData;
