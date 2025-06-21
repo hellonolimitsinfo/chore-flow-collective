@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 
 interface CreateHouseholdFormProps {
   onCreateHousehold: (name: string, description?: string) => Promise<any>;
@@ -14,6 +15,7 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const { theme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,15 +33,15 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
   };
 
   return (
-    <Card className="bg-slate-800 border-slate-700">
+    <Card className={theme === 'light' ? 'bg-white border-[#ddd] shadow-sm' : 'bg-slate-800 border-slate-700'}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-white">Create New Household</CardTitle>
+          <CardTitle className={theme === 'light' ? 'text-[#111111]' : 'text-white'}>Create New Household</CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={onCancel}
-            className="text-slate-400 hover:text-white"
+            className={theme === 'light' ? 'text-[#666666] hover:text-[#111111] hover:bg-gray-100' : 'text-slate-400 hover:text-white'}
           >
             <X className="w-4 h-4" />
           </Button>
@@ -48,30 +50,36 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Household Name</label>
+            <label className={`text-sm font-medium ${theme === 'light' ? 'text-[#333333]' : 'text-slate-300'}`}>Household Name</label>
             <Input
               placeholder="Enter household name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+              className={theme === 'light' 
+                ? 'bg-white border-[#ddd] text-[#111111] placeholder-[#888888]' 
+                : 'bg-slate-700 border-slate-600 text-white placeholder-slate-400'
+              }
               required
             />
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Description (Optional)</label>
+            <label className={`text-sm font-medium ${theme === 'light' ? 'text-[#333333]' : 'text-slate-300'}`}>Description (Optional)</label>
             <Input
               placeholder="Enter household description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+              className={theme === 'light' 
+                ? 'bg-white border-[#ddd] text-[#111111] placeholder-[#888888]' 
+                : 'bg-slate-700 border-slate-600 text-white placeholder-slate-400'
+              }
             />
           </div>
 
           <div className="flex space-x-2">
             <Button 
               type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className={`flex-1 ${theme === 'light' ? 'bg-[#007BFF] hover:bg-[#0056b3] text-white shadow-sm' : 'bg-blue-600 hover:bg-blue-700'}`}
               disabled={loading || !name.trim()}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -81,7 +89,10 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
               type="button"
               variant="outline" 
               onClick={onCancel}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              className={theme === 'light' 
+                ? 'border-[#ddd] text-[#333333] hover:bg-gray-50' 
+                : 'border-slate-600 text-slate-300 hover:bg-slate-700'
+              }
             >
               Cancel
             </Button>
