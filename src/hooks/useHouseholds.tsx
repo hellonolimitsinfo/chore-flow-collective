@@ -146,26 +146,70 @@ export const useHouseholds = () => {
   const deleteHousehold = async (householdId: string) => {
     if (!user) {
       console.error('No user found, cannot delete household');
+      toast.error('You must be logged in to delete a household');
       return false;
     }
 
     try {
-      console.log('Deleting household:', householdId);
+      console.log('Attempting to delete household:', householdId);
       
-      const { error } = await supabase
+      // First check if the user has permission to delete this household
+      const { data: household, error: fetchError } = await supabase
+        .from('households')
+        .select('created_by')
+        .eq('id', householdId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching household for deletion check:', fetchError);
+        toast.error('Failed to verify household permissions');
+        return false;
+      }
+
+      // Check if user is creator or admin
+      const isCreator = household.created_by === user.id;
+      let isAdmin = false;
+
+      if (!isCreator) {
+        const { data: memberData, error: memberError } = await supabase
+          .from('household_members')
+          .select('role')
+          .eq('household_id', householdId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (!memberError && memberData?.role === 'admin') {
+          isAdmin = true;
+        }
+      }
+
+      if (!isCreator && !isAdmin) {
+        toast.error('You do not have permission to delete this household');
+        return false;
+      }
+
+      // Perform the deletion
+      const { error: deleteError } = await supabase
         .from('households')
         .delete()
         .eq('id', householdId);
 
-      if (error) {
-        console.error('Error deleting household:', error);
-        toast.error('Failed to delete household');
+      if (deleteError) {
+        console.error('Error deleting household:', deleteError);
+        toast.error('Failed to delete household: ' + deleteError.message);
         return false;
       }
 
-      console.log('Successfully deleted household');
+      console.log('Successfully deleted household:', householdId);
       toast.success('Household deleted successfully!');
-      fetchHouseholds(); // Refresh the list
+      
+      // Remove the household from local state immediately for better UX
+      setHouseholds(prevHouseholds => 
+        prevHouseholds.filter(h => h.id !== householdId)
+      );
+      
+      // Also refresh from server to ensure consistency
+      await fetchHouseholds();
       return true;
     } catch (error) {
       console.error('Error deleting household:', error);
