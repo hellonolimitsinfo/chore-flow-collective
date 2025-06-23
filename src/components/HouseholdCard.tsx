@@ -3,12 +3,19 @@ import { Users, Settings, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+interface HouseholdMember {
+  user_id: string;
+  role: string;
+  full_name?: string;
+}
+
 interface Household {
   id: string;
   name: string;
   description?: string;
   member_count?: number;
   user_role?: string;
+  members?: HouseholdMember[];
 }
 
 interface HouseholdCardProps {
@@ -63,9 +70,21 @@ export const HouseholdCard = ({ household, isSelected, onSelect, onDelete }: Hou
         </div>
         <div className="flex items-center text-slate-400">
           <Users className="w-4 h-4 mr-2" />
-          <span>{household.member_count || 0} members</span>
+          <div className="flex flex-col">
+            <span>{household.member_count || 0} members</span>
+            {household.members && household.members.length > 0 && (
+              <div className="text-xs text-slate-500 mt-1">
+                {household.members.map((member, index) => (
+                  <span key={member.user_id}>
+                    {member.full_name || 'Unknown'}
+                    {index < household.members!.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           {household.user_role === 'admin' && (
-            <span className="ml-2 px-2 py-1 text-xs bg-blue-600 text-white rounded">Admin</span>
+            <span className="ml-auto px-2 py-1 text-xs bg-blue-600 text-white rounded">Admin</span>
           )}
         </div>
       </CardContent>

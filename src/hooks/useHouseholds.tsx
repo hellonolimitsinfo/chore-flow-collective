@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+interface HouseholdMember {
+  user_id: string;
+  role: string;
+  full_name?: string;
+}
+
 interface Household {
   id: string;
   name: string;
@@ -12,6 +18,7 @@ interface Household {
   updated_at: string;
   member_count?: number;
   user_role?: string;
+  members?: HouseholdMember[];
 }
 
 export const useHouseholds = () => {
@@ -43,12 +50,16 @@ export const useHouseholds = () => {
 
       console.log('Fetched households:', householdsData);
 
-      // Fetch household members for each household to get member count and user role
+      // Fetch household members with profile information for each household
       const householdsWithDetails = await Promise.all(
         (householdsData || []).map(async (household) => {
           const { data: membersData, error: membersError } = await supabase
             .from('household_members')
-            .select('user_id, role')
+            .select(`
+              user_id,
+              role,
+              profiles!inner(full_name)
+            `)
             .eq('household_id', household.id);
 
           if (membersError) {
@@ -56,18 +67,26 @@ export const useHouseholds = () => {
             return {
               ...household,
               member_count: 0,
-              user_role: 'member'
+              user_role: 'member',
+              members: []
             };
           }
 
-          const memberCount = membersData?.length || 0;
-          const userMember = membersData?.find(member => member.user_id === user.id);
+          const members = membersData?.map(member => ({
+            user_id: member.user_id,
+            role: member.role,
+            full_name: member.profiles?.full_name
+          })) || [];
+
+          const memberCount = members.length;
+          const userMember = members.find(member => member.user_id === user.id);
           const userRole = userMember?.role || 'member';
 
           return {
             ...household,
             member_count: memberCount,
-            user_role: userRole
+            user_role: userRole,
+            members: members
           };
         })
       );
