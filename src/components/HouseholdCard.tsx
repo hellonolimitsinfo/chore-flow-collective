@@ -2,21 +2,7 @@
 import { Users, Settings, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-interface HouseholdMember {
-  user_id: string;
-  role: string;
-  full_name?: string;
-}
-
-interface Household {
-  id: string;
-  name: string;
-  description?: string;
-  member_count?: number;
-  user_role?: string;
-  members?: HouseholdMember[];
-}
+import type { Household } from "@/types/household";
 
 interface HouseholdCardProps {
   household: Household;
