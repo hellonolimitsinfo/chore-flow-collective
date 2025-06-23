@@ -129,7 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
     const inviteLink = `https://chore-flow-collective.lovable.app/auth?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`;
 
     const emailResponse = await resend.emails.send({
-      from: "Flatmate Flow <onboarding@resend.dev>",
+      from: "Flatmate Flow <invite@flatmateflow.uk>",
       to: [inviteEmail],
       subject: `You're invited to join ${householdName}!`,
       html: `
