@@ -58,7 +58,9 @@ export const useHouseholds = () => {
             .select(`
               user_id,
               role,
-              profiles!inner(full_name)
+              profiles (
+                full_name
+              )
             `)
             .eq('household_id', household.id);
 
