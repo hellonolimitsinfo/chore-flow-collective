@@ -13,15 +13,33 @@ const GoogleSignInButton = ({ loading, setLoading }: GoogleSignInButtonProps) =>
     try {
       setLoading(true);
       
-      // Get invitation parameters from localStorage if they exist
-      const pendingInvitation = localStorage.getItem('pending_invitation');
+      // Get invitation parameters from URL or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteEmail = urlParams.get('invite_email');
+      const householdId = urlParams.get('household_id');
+      
+      // If not in URL, check localStorage
+      let pendingInvitation = null;
+      if (!inviteEmail || !householdId) {
+        const storedInvitation = localStorage.getItem('pending_invitation');
+        if (storedInvitation) {
+          pendingInvitation = JSON.parse(storedInvitation);
+        }
+      } else {
+        pendingInvitation = { invite_email: inviteEmail, household_id: householdId };
+        // Store in localStorage as backup
+        localStorage.setItem('pending_invitation', JSON.stringify(pendingInvitation));
+      }
+      
+      // Create redirect URL with invitation parameters
       let redirectUrl = 'https://chore-flow-collective.lovable.app';
       
       if (pendingInvitation) {
-        const invitation = JSON.parse(pendingInvitation);
-        // Include invitation parameters in the redirect URL
-        redirectUrl = `https://chore-flow-collective.lovable.app/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`;
+        // Include invitation parameters in the redirect URL so they survive OAuth
+        redirectUrl = `https://chore-flow-collective.lovable.app/?invite_email=${encodeURIComponent(pendingInvitation.invite_email)}&household_id=${pendingInvitation.household_id}`;
       }
+      
+      console.log('Google OAuth redirect URL:', redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -31,9 +49,11 @@ const GoogleSignInButton = ({ loading, setLoading }: GoogleSignInButtonProps) =>
       });
 
       if (error) {
+        console.error('Google OAuth error:', error);
         toast.error(error.message);
       }
     } catch (error) {
+      console.error('Google sign-in error:', error);
       toast.error("An unexpected error occurred with Google sign-in.");
     } finally {
       setLoading(false);

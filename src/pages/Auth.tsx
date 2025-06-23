@@ -31,22 +31,25 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // If user is already logged in, redirect to home page
-        // The useInvitationHandler will handle the invitation processing
-        navigate("/");
+        console.log('User already logged in, redirecting with invitation params');
+        // If user is already logged in, redirect with invitation parameters preserved
+        if (inviteEmail && householdId) {
+          navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
+        } else {
+          navigate("/");
+        }
       }
     };
     checkUser();
   }, [navigate, searchParams]);
 
-  const resetForm = () => {
-    // This function is no longer needed as form state is managed in AuthForm
-  };
-
   const toggleMode = () => {
     setIsLogin(!isLogin);
-    resetForm();
   };
+
+  // Get invitation info for display
+  const inviteEmail = searchParams.get('invite_email');
+  const isInviteFlow = !!inviteEmail;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -58,9 +61,9 @@ const Auth = () => {
             <CardTitle className="text-white text-center">
               {isLogin ? "Sign In" : "Sign Up"}
             </CardTitle>
-            {searchParams.get('invite_email') && (
+            {isInviteFlow && (
               <p className="text-sm text-slate-400 text-center mt-2">
-                You've been invited to join a household. Please {isLogin ? 'sign in' : 'sign up'} to continue.
+                You've been invited to join a household. Please {isLogin ? 'sign in' : 'sign up'} with <span className="text-blue-400">{inviteEmail}</span> to continue.
               </p>
             )}
           </CardHeader>

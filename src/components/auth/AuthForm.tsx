@@ -44,22 +44,44 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
 
         toast.success("Successfully signed in!");
         
-        // Handle invitation redirect
-        const pendingInvitation = localStorage.getItem('pending_invitation');
-        if (pendingInvitation) {
-          const invitation = JSON.parse(pendingInvitation);
-          navigate(`/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`);
+        // Handle invitation redirect with URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteEmail = urlParams.get('invite_email');
+        const householdId = urlParams.get('household_id');
+        
+        if (inviteEmail && householdId) {
+          navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
         } else {
-          navigate("/");
+          // Check localStorage as fallback
+          const pendingInvitation = localStorage.getItem('pending_invitation');
+          if (pendingInvitation) {
+            const invitation = JSON.parse(pendingInvitation);
+            navigate(`/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`);
+          } else {
+            navigate("/");
+          }
         }
       } else {
         // Get invitation parameters for redirect URL
-        const pendingInvitation = localStorage.getItem('pending_invitation');
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteEmail = urlParams.get('invite_email');
+        const householdId = urlParams.get('household_id');
+        
+        // Check if this is the invited email
+        if (inviteEmail && email !== inviteEmail) {
+          toast.error(`This invitation was sent to ${inviteEmail}. Please use that email address to sign up.`);
+          return;
+        }
+        
         let redirectUrl = `${window.location.origin}/`;
         
-        if (pendingInvitation) {
-          const invitation = JSON.parse(pendingInvitation);
-          redirectUrl = `${window.location.origin}/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`;
+        if (inviteEmail && householdId) {
+          redirectUrl = `${window.location.origin}/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`;
+          // Store in localStorage as backup
+          localStorage.setItem('pending_invitation', JSON.stringify({
+            invite_email: inviteEmail,
+            household_id: householdId
+          }));
         }
 
         const { error } = await supabase.auth.signUp({
@@ -79,17 +101,16 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
           } else if (error.message.includes("Password should be")) {
             toast.error("Password should be at least 6 characters long.");
           } else {
+            console.error('Sign up error:', error);
             toast.error(error.message);
           }
           return;
         }
 
         toast.success("Account created! Please check your email for verification.");
-        
-        // For sign up, we'll let the email verification handle the redirect
-        // The invitation handler will process the invitation once they're verified
       }
     } catch (error) {
+      console.error('Auth error:', error);
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
