@@ -15,19 +15,25 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    // Store invitation parameters in localStorage if they exist
+    const inviteEmail = searchParams.get('invite_email');
+    const householdId = searchParams.get('household_id');
+    
+    if (inviteEmail && householdId) {
+      localStorage.setItem('pending_invitation', JSON.stringify({
+        invite_email: inviteEmail,
+        household_id: householdId
+      }));
+      console.log('Stored invitation parameters:', { inviteEmail, householdId });
+    }
+
     // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // If there are invitation parameters, redirect with them
-        const inviteEmail = searchParams.get('invite_email');
-        const householdId = searchParams.get('household_id');
-        
-        if (inviteEmail && householdId) {
-          navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
-        } else {
-          navigate("/");
-        }
+        // If user is already logged in, redirect to home page
+        // The useInvitationHandler will handle the invitation processing
+        navigate("/");
       }
     };
     checkUser();

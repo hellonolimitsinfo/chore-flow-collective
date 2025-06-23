@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 interface AuthFormProps {
@@ -19,7 +19,6 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,15 +45,23 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
         toast.success("Successfully signed in!");
         
         // Handle invitation redirect
-        const inviteEmail = searchParams.get('invite_email');
-        const householdId = searchParams.get('household_id');
-        
-        if (inviteEmail && householdId) {
-          navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
+        const pendingInvitation = localStorage.getItem('pending_invitation');
+        if (pendingInvitation) {
+          const invitation = JSON.parse(pendingInvitation);
+          navigate(`/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`);
         } else {
           navigate("/");
         }
       } else {
+        // Get invitation parameters for redirect URL
+        const pendingInvitation = localStorage.getItem('pending_invitation');
+        let redirectUrl = `${window.location.origin}/`;
+        
+        if (pendingInvitation) {
+          const invitation = JSON.parse(pendingInvitation);
+          redirectUrl = `${window.location.origin}/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -62,6 +69,7 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
             data: {
               full_name: fullName,
             },
+            emailRedirectTo: redirectUrl
           },
         });
 
@@ -86,12 +94,6 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetForm = () => {
-    setEmail("");
-    setPassword("");
-    setFullName("");
   };
 
   return (

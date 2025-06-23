@@ -125,12 +125,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-    // Get the site URL from environment or construct from request
-    const siteUrl = Deno.env.get("SUPABASE_URL")?.replace('/rest/v1', '') || 
-                   `${new URL(req.url).protocol}//${new URL(req.url).host}`;
-
-    // Create invitation link with email parameter for matching
-    const inviteLink = `${siteUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`https://chore-flow-collective.lovable.app/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`)}`;
+    // Create invitation link that goes to your custom auth page with invitation parameters
+    const inviteLink = `https://chore-flow-collective.lovable.app/auth?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`;
 
     const emailResponse = await resend.emails.send({
       from: "Flatmate Flow <onboarding@resend.dev>",

@@ -12,10 +12,21 @@ const GoogleSignInButton = ({ loading, setLoading }: GoogleSignInButtonProps) =>
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
+      
+      // Get invitation parameters from localStorage if they exist
+      const pendingInvitation = localStorage.getItem('pending_invitation');
+      let redirectUrl = 'https://chore-flow-collective.lovable.app';
+      
+      if (pendingInvitation) {
+        const invitation = JSON.parse(pendingInvitation);
+        // Include invitation parameters in the redirect URL
+        redirectUrl = `https://chore-flow-collective.lovable.app/?invite_email=${encodeURIComponent(invitation.invite_email)}&household_id=${invitation.household_id}`;
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://chore-flow-collective.lovable.app'
+          redirectTo: redirectUrl
         }
       });
 

@@ -12,8 +12,19 @@ export const useInvitationHandler = () => {
   
   useEffect(() => {
     const handleInvitation = async () => {
-      const inviteEmail = searchParams.get('invite_email');
-      const householdId = searchParams.get('household_id');
+      // First check URL parameters
+      let inviteEmail = searchParams.get('invite_email');
+      let householdId = searchParams.get('household_id');
+      
+      // If not in URL, check localStorage
+      if (!inviteEmail || !householdId) {
+        const pendingInvitation = localStorage.getItem('pending_invitation');
+        if (pendingInvitation) {
+          const invitation = JSON.parse(pendingInvitation);
+          inviteEmail = invitation.invite_email;
+          householdId = invitation.household_id;
+        }
+      }
       
       if (!inviteEmail || !householdId) return;
       
@@ -27,8 +38,9 @@ export const useInvitationHandler = () => {
       // Check if the signed-in user's email matches the invitation email
       if (user.email !== inviteEmail) {
         toast.error('This invitation was sent to a different email address');
-        // Clear the URL parameters
+        // Clear the URL parameters and localStorage
         setSearchParams(new URLSearchParams());
+        localStorage.removeItem('pending_invitation');
         return;
       }
       
@@ -43,8 +55,9 @@ export const useInvitationHandler = () => {
           
         if (existingMember) {
           toast.success('You are already a member of this household!');
-          // Clear the URL parameters
+          // Clear the URL parameters and localStorage
           setSearchParams(new URLSearchParams());
+          localStorage.removeItem('pending_invitation');
           return;
         }
         
@@ -83,8 +96,9 @@ export const useInvitationHandler = () => {
         console.error('Error processing invitation:', error);
         toast.error('Failed to process invitation');
       } finally {
-        // Clear the URL parameters
+        // Clear the URL parameters and localStorage
         setSearchParams(new URLSearchParams());
+        localStorage.removeItem('pending_invitation');
       }
     };
     
