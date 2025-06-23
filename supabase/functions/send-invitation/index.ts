@@ -83,6 +83,44 @@ const handler = async (req: Request): Promise<Response> => {
           }
         );
       }
+
+      // If user exists and isn't a member, add them directly
+      const { error: addMemberError } = await supabaseClient
+        .from('household_members')
+        .insert({
+          household_id: householdId,
+          user_id: userProfile.id,
+          role: 'member'
+        });
+
+      if (addMemberError) {
+        console.error('Error adding existing user to household:', addMemberError);
+        return new Response(
+          JSON.stringify({ error: "Failed to add user to household" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    } else {
+      // If user doesn't exist, create a pending invitation record
+      const invitationToken = crypto.randomUUID();
+      
+      const { error: inviteError } = await supabaseClient
+        .from('household_invitations')
+        .insert({
+          household_id: householdId,
+          email: inviteEmail,
+          token: invitationToken,
+          invited_by: req.headers.get("Authorization") ? 
+            (await supabaseClient.auth.getUser()).data.user?.id : null
+        });
+
+      if (inviteError) {
+        console.error('Error creating invitation record:', inviteError);
+        // Continue with email sending even if invitation record fails
+      }
     }
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -90,6 +128,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Get the site URL from environment or construct from request
     const siteUrl = Deno.env.get("SUPABASE_URL")?.replace('/rest/v1', '') || 
                    `${new URL(req.url).protocol}//${new URL(req.url).host}`;
+
+    // Create invitation link with email parameter for matching
+    const inviteLink = `${siteUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`https://chore-flow-collective.lovable.app/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`)}`;
 
     const emailResponse = await resend.emails.send({
       from: "Flatmate Flow <onboarding@resend.dev>",
@@ -108,7 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${siteUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://chore-flow-collective.lovable.app/')}" 
+            <a href="${inviteLink}" 
                style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
               Join ${householdName}
             </a>
@@ -133,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
       success: true, 
       data: emailResponse,
       userExists: !!userProfile,
-      message: userProfile ? "Invitation sent to existing user" : "Invitation sent to new user"
+      message: userProfile ? "User added to household and email sent" : "Invitation sent to new user"
     }), {
       status: 200,
       headers: {

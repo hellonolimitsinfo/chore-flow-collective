@@ -1,181 +1,96 @@
-
-import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useHouseholds } from "@/hooks/useHouseholds";
+import { useInvitationHandler } from "@/hooks/useInvitationHandler";
+import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Home } from "lucide-react";
+import { Plus, Users, Calendar, ShoppingCart, DollarSign } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
 import { HouseholdCard } from "@/components/HouseholdCard";
-import { UrgentItems } from "@/components/UrgentItems";
+import { CreateHouseholdForm } from "@/components/households/CreateHouseholdForm";
 import { ChoresSection } from "@/components/ChoresSection";
 import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
-import { UserMenu } from "@/components/UserMenu";
-import { CreateHouseholdForm } from "@/components/households/CreateHouseholdForm";
-import { useAuth } from "@/hooks/useAuth";
-import { useHouseholds } from "@/hooks/useHouseholds";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { UrgentItems } from "@/components/UrgentItems";
+import { useState } from "react";
 
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  const { households, loading: householdsLoading, createHousehold, deleteHousehold } = useHouseholds();
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [selectedHousehold, setSelectedHousehold] = useState<any>(null);
-  const [showCreateHousehold, setShowCreateHousehold] = useState(false);
+  const { user, loading } = useAuth();
+  const { households, loading: householdsLoading } = useHouseholds();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  
+  // Handle invitation processing
+  useInvitationHandler();
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth");
-      return;
-    }
-
-    if (user) {
-      // Fetch user profile
-      const fetchProfile = async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        if (data) {
-          setUserProfile(data);
-        }
-      };
-      fetchProfile();
-    }
-  }, [user, authLoading, navigate]);
-
-  useEffect(() => {
-    // Auto-select first household if none selected
-    if (households.length > 0 && !selectedHousehold) {
-      setSelectedHousehold(households[0]);
-    }
-  }, [households, selectedHousehold]);
-
-  const handleCreateHousehold = async (name: string, description?: string) => {
-    const result = await createHousehold(name, description);
-    if (result) {
-      setShowCreateHousehold(false);
-      setSelectedHousehold(result);
-    }
-    return result;
-  };
-
-  const handleDeleteHousehold = async (householdId: string) => {
-    const success = await deleteHousehold(householdId);
-    if (success && selectedHousehold?.id === householdId) {
-      setSelectedHousehold(null);
-    }
-  };
-
-  if (authLoading || householdsLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
       </div>
     );
   }
 
   if (!user) {
-    return null; // This will redirect to auth in useEffect
+    return <Navigate to="/auth" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted text-foreground">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg flatmate-gradient flex items-center justify-center">
-                <Home className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Flatmate Flow</h1>
-                <p className="text-muted-foreground text-sm">Keep track of chores, shopping, and responsibilities</p>
-              </div>
-            </div>
-            <UserMenu user={{ 
-              name: userProfile?.full_name || user.email?.split('@')[0] || 'User',
-              email: user.email || '' 
-            }} />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      <header className="p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Flatmate Flow</h1>
+        <UserMenu />
       </header>
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Household Creation Form */}
-        {showCreateHousehold && (
-          <CreateHouseholdForm 
-            onCreateHousehold={handleCreateHousehold}
-            onCancel={() => setShowCreateHousehold(false)}
-          />
-        )}
-
-        {/* Household Management */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-foreground">Your Households</h2>
-            {!showCreateHousehold && (
-              <Button 
-                onClick={() => setShowCreateHousehold(true)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Household
-              </Button>
-            )}
+      <main className="container mx-auto p-4">
+        <section className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Your Households
+            </h2>
+            <Button onClick={() => setShowCreateForm(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create New
+            </Button>
           </div>
 
-          {households.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {householdsLoading ? (
+            <div className="text-white">Loading households...</div>
+          ) : households.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {households.map((household) => (
-                <HouseholdCard
-                  key={household.id}
-                  household={household}
-                  isSelected={selectedHousehold?.id === household.id}
-                  onSelect={() => setSelectedHousehold(household)}
-                  onDelete={handleDeleteHousehold}
-                />
+                <HouseholdCard key={household.id} household={household} />
               ))}
             </div>
           ) : (
-            !showCreateHousehold && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">You haven't joined any households yet.</p>
-                <Button 
-                  onClick={() => setShowCreateHousehold(true)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Household
-                </Button>
-              </div>
-            )
+            <div className="text-slate-400">
+              No households yet. Create one to get started!
+            </div>
           )}
-        </div>
+        </section>
 
-        {/* Main Dashboard */}
-        {selectedHousehold && (
-          <>
-            <div className="border-t border-border pt-6">
-              <h3 className="text-lg font-medium text-foreground mb-4">
-                Managing: {selectedHousehold.name}
-              </h3>
-            </div>
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <ChoresSection />
+          </div>
+          <div>
+            <ShoppingSection />
+          </div>
+        </section>
 
-            {/* Urgent Items */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
+          <div>
+            <ExpensesSection />
+          </div>
+          <div>
             <UrgentItems />
+          </div>
+        </section>
+      </main>
 
-            {/* Main Content Grid */}
-            <div className="grid gap-6 lg:grid-cols-3">
-              <ChoresSection />
-              <ShoppingSection />
-              <ExpensesSection />
-            </div>
-          </>
-        )}
-      </div>
+      <CreateHouseholdForm
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+      />
     </div>
   );
 };
