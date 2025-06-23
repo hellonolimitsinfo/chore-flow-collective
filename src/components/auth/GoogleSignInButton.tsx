@@ -18,17 +18,26 @@ const GoogleSignInButton = ({ loading, setLoading }: GoogleSignInButtonProps) =>
       const inviteEmail = urlParams.get('invite_email');
       const householdId = urlParams.get('household_id');
       
-      // Always store invitation params in localStorage if they exist
-      if (inviteEmail && householdId) {
-        localStorage.setItem('pending_invitation', JSON.stringify({
-          invite_email: inviteEmail,
-          household_id: householdId
-        }));
-        console.log('Stored invitation parameters for Google OAuth:', { inviteEmail, householdId });
+      // If not in URL, check localStorage
+      let pendingInvitation = null;
+      if (!inviteEmail || !householdId) {
+        const storedInvitation = localStorage.getItem('pending_invitation');
+        if (storedInvitation) {
+          pendingInvitation = JSON.parse(storedInvitation);
+        }
+      } else {
+        pendingInvitation = { invite_email: inviteEmail, household_id: householdId };
+        // Store in localStorage as backup
+        localStorage.setItem('pending_invitation', JSON.stringify(pendingInvitation));
       }
       
-      // Create redirect URL - simpler approach that goes to root
-      const redirectUrl = window.location.origin;
+      // Create redirect URL with invitation parameters
+      let redirectUrl = 'https://chore-flow-collective.lovable.app';
+      
+      if (pendingInvitation) {
+        // Include invitation parameters in the redirect URL so they survive OAuth
+        redirectUrl = `https://chore-flow-collective.lovable.app/?invite_email=${encodeURIComponent(pendingInvitation.invite_email)}&household_id=${pendingInvitation.household_id}`;
+      }
       
       console.log('Google OAuth redirect URL:', redirectUrl);
       

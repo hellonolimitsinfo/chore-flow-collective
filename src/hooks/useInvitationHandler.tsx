@@ -131,17 +131,15 @@ export const useInvitationHandler = () => {
         console.error('Error processing invitation:', error);
         toast.error('Failed to process invitation');
       } finally {
-        // Clear the URL parameters and localStorage and redirect to main page
-        console.log('Cleaning up invitation parameters and redirecting');
+        // Clear the URL parameters and localStorage
+        console.log('Cleaning up invitation parameters');
         setSearchParams(new URLSearchParams());
         localStorage.removeItem('pending_invitation');
-        // Force navigation to home page
-        window.location.href = '/';
       }
     };
     
-    // Only run if we have a user and invitation parameters
-    if (user && (searchParams.get('invite_email') || localStorage.getItem('pending_invitation'))) {
+    // Only run if we have a user or invitation parameters
+    if (user || searchParams.get('invite_email') || localStorage.getItem('pending_invitation')) {
       handleInvitation();
     }
   }, [user, searchParams, setSearchParams, navigate]);
