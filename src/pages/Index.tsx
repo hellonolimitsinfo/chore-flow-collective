@@ -16,7 +16,7 @@ import { useState } from "react";
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { households, loading: householdsLoading } = useHouseholds();
+  const { households, loading: householdsLoading, createHousehold, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   
@@ -35,9 +35,12 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  const handleDeleteHousehold = (householdId: string) => {
-    console.log('Delete household:', householdId);
-    // This will be handled by the useHouseholds hook
+  const handleCreateHousehold = async (name: string, description?: string) => {
+    return await createHousehold(name, description);
+  };
+
+  const handleDeleteHousehold = async (householdId: string) => {
+    return await deleteHousehold(householdId);
   };
 
   return (
@@ -106,6 +109,7 @@ const Index = () => {
       <CreateHouseholdForm
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
+        onCreateHousehold={handleCreateHousehold}
       />
     </div>
   );

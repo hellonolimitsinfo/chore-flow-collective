@@ -3,14 +3,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, X } from "lucide-react";
 
 interface CreateHouseholdFormProps {
   onCreateHousehold: (name: string, description?: string) => Promise<any>;
-  onCancel: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouseholdFormProps) => {
+export const CreateHouseholdForm = ({ onCreateHousehold, isOpen, onClose }: CreateHouseholdFormProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,26 +28,16 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
     if (result) {
       setName("");
       setDescription("");
-      onCancel();
+      onClose();
     }
   };
 
   return (
-    <Card className="bg-slate-800 border-slate-700">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-white">Create New Household</CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            className="text-slate-400 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogHeader>
+          <DialogTitle className="text-white">Create New Household</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Household Name</label>
@@ -80,14 +72,14 @@ export const CreateHouseholdForm = ({ onCreateHousehold, onCancel }: CreateHouse
             <Button 
               type="button"
               variant="outline" 
-              onClick={onCancel}
+              onClick={onClose}
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
             >
               Cancel
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };
