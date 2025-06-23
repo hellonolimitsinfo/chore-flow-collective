@@ -36,7 +36,60 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending invitation:", { householdId, householdName, inviteEmail, inviterName });
 
+    // Look up the user by email in profiles table
+    const { data: userProfile, error: userError } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('email', inviteEmail)
+      .maybeSingle();
+
+    if (userError) {
+      console.error('Error looking up user:', userError);
+      return new Response(
+        JSON.stringify({ error: "Failed to lookup user" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // If user exists, check if they're already a member of this household
+    if (userProfile) {
+      const { data: existingMember, error: memberError } = await supabaseClient
+        .from('household_members')
+        .select('id')
+        .eq('household_id', householdId)
+        .eq('user_id', userProfile.id)
+        .maybeSingle();
+
+      if (memberError) {
+        console.error('Error checking existing membership:', memberError);
+        return new Response(
+          JSON.stringify({ error: "Failed to check membership" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
+      if (existingMember) {
+        return new Response(
+          JSON.stringify({ error: "User is already a member of this household" }),
+          {
+            status: 409,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
+
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+    // Get the site URL from environment or construct from request
+    const siteUrl = Deno.env.get("SUPABASE_URL")?.replace('/rest/v1', '') || 
+                   `${new URL(req.url).protocol}//${new URL(req.url).host}`;
 
     const emailResponse = await resend.emails.send({
       from: "Flatmate Flow <onboarding@resend.dev>",
@@ -55,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${Deno.env.get("SUPABASE_URL")?.replace('/rest/v1', '')}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}" 
+            <a href="${siteUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://chore-flow-collective.lovable.app/')}" 
                style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
               Join ${householdName}
             </a>
@@ -76,7 +129,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, data: emailResponse }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      data: emailResponse,
+      userExists: !!userProfile,
+      message: userProfile ? "Invitation sent to existing user" : "Invitation sent to new user"
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
