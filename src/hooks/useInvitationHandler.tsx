@@ -3,20 +3,26 @@ import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export const useInvitationHandler = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   useEffect(() => {
     const handleInvitation = async () => {
-      if (!user) return;
-      
       const inviteEmail = searchParams.get('invite_email');
       const householdId = searchParams.get('household_id');
       
       if (!inviteEmail || !householdId) return;
+      
+      // If user is not logged in, redirect to auth page with invitation params preserved
+      if (!user) {
+        console.log('User not authenticated, redirecting to auth page');
+        navigate(`/auth?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
+        return;
+      }
       
       // Check if the signed-in user's email matches the invitation email
       if (user.email !== inviteEmail) {
@@ -83,5 +89,5 @@ export const useInvitationHandler = () => {
     };
     
     handleInvitation();
-  }, [user, searchParams, setSearchParams]);
+  }, [user, searchParams, setSearchParams, navigate]);
 };

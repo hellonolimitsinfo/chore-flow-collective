@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 interface AuthFormProps {
@@ -19,6 +19,7 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +44,16 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
         }
 
         toast.success("Successfully signed in!");
-        navigate("/");
+        
+        // Handle invitation redirect
+        const inviteEmail = searchParams.get('invite_email');
+        const householdId = searchParams.get('household_id');
+        
+        if (inviteEmail && householdId) {
+          navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
+        } else {
+          navigate("/");
+        }
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -67,6 +77,9 @@ const AuthForm = ({ isLogin, loading, setLoading }: AuthFormProps) => {
         }
 
         toast.success("Account created! Please check your email for verification.");
+        
+        // For sign up, we'll let the email verification handle the redirect
+        // The invitation handler will process the invitation once they're verified
       }
     } catch (error) {
       toast.error("An unexpected error occurred. Please try again.");

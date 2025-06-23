@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthHeader from "@/components/auth/AuthHeader";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 import { AuthForm } from "@/components/auth/AuthForm";
@@ -12,17 +12,26 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/");
+        // If there are invitation parameters, redirect with them
+        const inviteEmail = searchParams.get('invite_email');
+        const householdId = searchParams.get('household_id');
+        
+        if (inviteEmail && householdId) {
+          navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
+        } else {
+          navigate("/");
+        }
       }
     };
     checkUser();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   const resetForm = () => {
     // This function is no longer needed as form state is managed in AuthForm
@@ -43,6 +52,11 @@ const Auth = () => {
             <CardTitle className="text-white text-center">
               {isLogin ? "Sign In" : "Sign Up"}
             </CardTitle>
+            {searchParams.get('invite_email') && (
+              <p className="text-sm text-slate-400 text-center mt-2">
+                You've been invited to join a household. Please {isLogin ? 'sign in' : 'sign up'} to continue.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <GoogleSignInButton loading={loading} setLoading={setLoading} />
