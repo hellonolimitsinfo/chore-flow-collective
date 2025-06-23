@@ -50,18 +50,13 @@ export const useHouseholds = () => {
 
       console.log('Fetched households:', householdsData);
 
-      // Fetch household members with profile information for each household
+      // Fetch household members and their profile information for each household
       const householdsWithDetails = await Promise.all(
         (householdsData || []).map(async (household) => {
+          // First, get the household members
           const { data: membersData, error: membersError } = await supabase
             .from('household_members')
-            .select(`
-              user_id,
-              role,
-              profiles (
-                full_name
-              )
-            `)
+            .select('user_id, role')
             .eq('household_id', household.id);
 
           if (membersError) {
@@ -74,11 +69,22 @@ export const useHouseholds = () => {
             };
           }
 
-          const members = membersData?.map(member => ({
-            user_id: member.user_id,
-            role: member.role,
-            full_name: member.profiles?.full_name
-          })) || [];
+          // Then, get the profile information for each member
+          const members: HouseholdMember[] = [];
+          
+          for (const member of membersData || []) {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', member.user_id)
+              .single();
+
+            members.push({
+              user_id: member.user_id,
+              role: member.role,
+              full_name: profileError ? undefined : profileData?.full_name
+            });
+          }
 
           const memberCount = members.length;
           const userMember = members.find(member => member.user_id === user.id);
