@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -17,6 +18,7 @@ const Index = () => {
   const { user, loading } = useAuth();
   const { households, loading: householdsLoading } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   
   // Handle invitation processing
   useInvitationHandler();
@@ -33,11 +35,19 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
+  const handleDeleteHousehold = (householdId: string) => {
+    console.log('Delete household:', householdId);
+    // This will be handled by the useHouseholds hook
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Flatmate Flow</h1>
-        <UserMenu />
+        <UserMenu user={{ 
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email || ''
+        }} />
       </header>
 
       <main className="container mx-auto p-4">
@@ -58,7 +68,13 @@ const Index = () => {
           ) : households.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {households.map((household) => (
-                <HouseholdCard key={household.id} household={household} />
+                <HouseholdCard 
+                  key={household.id} 
+                  household={household}
+                  isSelected={selectedHouseholdId === household.id}
+                  onSelect={() => setSelectedHouseholdId(household.id)}
+                  onDelete={handleDeleteHousehold}
+                />
               ))}
             </div>
           ) : (
@@ -88,7 +104,7 @@ const Index = () => {
       </main>
 
       <CreateHouseholdForm
-        open={showCreateForm}
+        isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
       />
     </div>
