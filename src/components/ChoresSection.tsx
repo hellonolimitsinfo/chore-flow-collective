@@ -15,7 +15,7 @@ interface ChoresSectionProps {
 export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const { chores, loading, createChore, completeChore } = useChores(selectedHouseholdId);
-  const { members } = useHouseholdMembers(selectedHouseholdId);
+  const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
 
   const handleAddChore = async (name: string, frequency: string, assigneeId: string) => {
     await createChore(name, frequency, assigneeId);
@@ -35,6 +35,8 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
     }
   };
 
+  const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
+
   return (
     <>
       <Card className="bg-slate-800 border-slate-700">
@@ -45,9 +47,16 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
           </CardTitle>
           <Button 
             size="sm" 
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed"
             onClick={() => setShowAddDialog(true)}
-            disabled={!selectedHouseholdId || members.length === 0}
+            disabled={isAddButtonDisabled}
+            title={
+              !selectedHouseholdId 
+                ? "Select a household first" 
+                : members.length === 0 
+                  ? "No household members found" 
+                  : "Add a new chore"
+            }
           >
             <Plus className="w-4 h-4 mr-1" />
             Add Chore
