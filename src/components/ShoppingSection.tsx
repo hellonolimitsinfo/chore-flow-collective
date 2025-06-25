@@ -40,8 +40,19 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     }
   };
 
-  const getAssignedMember = (itemIndex: number) => {
+  const getCurrentAssignedMember = (item: any) => {
     if (members.length === 0) return 'Unknown';
+    
+    // If the item has an assigned_member_index, use that
+    if (typeof item.assigned_member_index === 'number' && item.assigned_member_index < members.length) {
+      return members[item.assigned_member_index].full_name || members[item.assigned_member_index].email;
+    }
+    
+    // Fallback to creation order assignment
+    const sortedItems = [...shoppingItems].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    const itemIndex = sortedItems.findIndex(sortedItem => sortedItem.id === item.id);
     const memberIndex = itemIndex % members.length;
     return members[memberIndex].full_name || members[memberIndex].email;
   };
@@ -51,23 +62,32 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     const item = shoppingItems.find(i => i.id === itemId);
     if (!item) return;
 
-    // Find the current item's position in the sorted list to determine next assignee
-    const sortedItems = [...shoppingItems].sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
+    // Get current assigned member index
+    let currentMemberIndex = 0;
+    if (typeof item.assigned_member_index === 'number') {
+      currentMemberIndex = item.assigned_member_index;
+    } else {
+      // Calculate based on creation order if not set
+      const sortedItems = [...shoppingItems].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      const itemIndex = sortedItems.findIndex(sortedItem => sortedItem.id === itemId);
+      currentMemberIndex = itemIndex % members.length;
+    }
     
-    const currentItemIndex = sortedItems.findIndex(sortedItem => sortedItem.id === itemId);
-    const nextMemberIndex = (currentItemIndex + 1) % members.length;
+    // Calculate next member index
+    const nextMemberIndex = (currentMemberIndex + 1) % members.length;
     const nextMember = members[nextMemberIndex];
     const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
     
     // Log to history (console for now)
     console.log(`Shopping item purchased - ${item.name} bought by ${currentUserName} at ${new Date().toISOString()}`);
     
-    // Reset item to default state for next person
+    // Reset item to default state and assign to next person
     await updateShoppingItem(itemId, { 
       is_purchased: false,
-      purchased_by: null
+      purchased_by: null,
+      assigned_member_index: nextMemberIndex
     });
     
     toast({
@@ -152,24 +172,16 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedItems.map((item) => {
-              // Find the original index for assignment calculation (based on creation order)
-              const originalItems = [...shoppingItems].sort((a, b) => 
-                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-              );
-              const originalIndex = originalItems.findIndex(origItem => origItem.id === item.id);
-              
-              return (
-                <ShoppingItemCard
-                  key={item.id}
-                  item={item}
-                  assignedMember={getAssignedMember(originalIndex)}
-                  onMarkPurchased={handleMarkPurchased}
-                  onFlagLow={handleFlagLow}
-                  onDelete={deleteShoppingItem}
-                />
-              );
-            })}
+            {sortedItems.map((item) => (
+              <ShoppingItemCard
+                key={item.id}
+                item={item}
+                assignedMember={getCurrentAssignedMember(item)}
+                onMarkPurchased={handleMarkPurchased}
+                onFlagLow={handleFlagLow}
+                onDelete={deleteShoppingItem}
+              />
+            ))}
           </div>
         )}
       </CardContent>

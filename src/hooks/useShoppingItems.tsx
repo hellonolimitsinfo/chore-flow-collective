@@ -12,6 +12,7 @@ type ShoppingItem = {
   quantity: number | null;
   is_purchased: boolean | null;
   purchased_by: string | null;
+  assigned_member_index: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -23,6 +24,7 @@ type ShoppingItemInsert = {
   quantity?: number | null;
   is_purchased?: boolean | null;
   purchased_by?: string | null;
+  assigned_member_index?: number | null;
 };
 
 export const useShoppingItems = (householdId: string | null) => {
@@ -67,6 +69,7 @@ export const useShoppingItems = (householdId: string | null) => {
         name,
         is_purchased: false,
         purchased_by: null,
+        assigned_member_index: 0, // Start with first member
       };
 
       const { data, error } = await supabase
