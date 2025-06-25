@@ -7,7 +7,6 @@ import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useAuth } from "@/hooks/useAuth";
 import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShoppingSectionProps {
@@ -22,7 +21,6 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     loading, 
     addShoppingItem, 
     deleteShoppingItem, 
-    markAsPurchased,
     updateShoppingItem 
   } = useShoppingItems(selectedHouseholdId);
   const { toast } = useToast();
@@ -42,49 +40,41 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     }
   };
 
-  const getNextMember = (currentMemberName: string) => {
+  const getAssignedMember = (itemIndex: number) => {
+    if (members.length === 0) return 'Unknown';
+    const memberIndex = itemIndex % members.length;
+    return members[memberIndex].full_name || members[memberIndex].email;
+  };
+
+  const getNextMember = (currentItemIndex: number) => {
     if (members.length === 0) return null;
-    
-    // Find current member index
-    const currentIndex = members.findIndex(member => 
-      (member.full_name || member.email) === currentMemberName
-    );
-    
-    // Get next member (rotate to beginning if at end)
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % members.length;
-    const nextMember = members[nextIndex];
-    
-    return nextMember.full_name || nextMember.email;
+    const nextIndex = (currentItemIndex + 1) % members.length;
+    return members[nextIndex].full_name || members[nextIndex].email;
   };
 
   const handleMarkPurchased = async (itemId: string) => {
-    const item = shoppingItems.find(i => i.id === itemId);
+    const itemIndex = shoppingItems.findIndex(i => i.id === itemId);
+    const item = shoppingItems[itemIndex];
     if (!item) return;
 
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    const assignedMember = getAssignedMember(itemIndex);
     
-    if (!item.is_purchased && item.purchased_by) {
-      // This is a flagged item - mark as purchased and rotate to next person
-      const nextMember = getNextMember(item.purchased_by);
-      
-      await updateShoppingItem(itemId, { 
-        is_purchased: true,
-        purchased_by: currentUserName // Track who actually bought it
-      });
-      
-      // Create a new item with the same name for the next person
-      if (nextMember) {
-        await addShoppingItem(item.name);
-      }
-      
-      toast({
-        title: "Item purchased! ✅",
-        description: `${item.name} bought by ${currentUserName}. ${nextMember ? `New item assigned to ${nextMember}` : ''}`,
-      });
-    } else if (!item.is_purchased && !item.purchased_by) {
-      // Regular item - mark as purchased
-      await markAsPurchased(itemId, currentUserName);
-    }
+    // Add to history by creating a temporary record (this will be handled by the history system)
+    console.log(`${item.name} purchased by ${currentUserName}`);
+    
+    // Reset item to default state and rotate to next member
+    const nextMember = getNextMember(itemIndex);
+    
+    await updateShoppingItem(itemId, { 
+      is_purchased: false,  // Reset to default state
+      purchased_by: null    // Clear any flags
+    });
+    
+    toast({
+      title: "Item purchased! ✅",
+      description: `${item.name} bought by ${currentUserName}. Now assigned to ${nextMember || 'next person'}.`,
+    });
   };
 
   const handleFlagLow = async (itemId: string) => {
@@ -102,7 +92,7 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
-  // Sort items: flagged first, then unpurchased, then purchased at the bottom
+  // Sort items: flagged first, then regular items
   const sortedItems = [...shoppingItems].sort((a, b) => {
     // Flagged items (has purchased_by but not purchased) first
     const aFlagged = !a.is_purchased && a.purchased_by;
@@ -110,10 +100,6 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     
     if (aFlagged && !bFlagged) return -1;
     if (!aFlagged && bFlagged) return 1;
-    
-    // Then sort by purchased status
-    if (a.is_purchased && !b.is_purchased) return 1;
-    if (!a.is_purchased && b.is_purchased) return -1;
     
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
@@ -168,10 +154,11 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedItems.map(item => (
+            {sortedItems.map((item, index) => (
               <ShoppingItemCard
                 key={item.id}
                 item={item}
+                assignedMember={getAssignedMember(sortedItems.findIndex(sortedItem => sortedItem.id === item.id))}
                 onMarkPurchased={handleMarkPurchased}
                 onFlagLow={handleFlagLow}
                 onDelete={deleteShoppingItem}

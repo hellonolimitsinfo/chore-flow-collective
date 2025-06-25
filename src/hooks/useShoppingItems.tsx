@@ -65,8 +65,8 @@ export const useShoppingItems = (householdId: string | null) => {
       const newItem: ShoppingItemInsert = {
         household_id: householdId,
         name,
-        quantity: 1,
         is_purchased: false,
+        purchased_by: null,
       };
 
       const { data, error } = await supabase
@@ -146,22 +146,6 @@ export const useShoppingItems = (householdId: string | null) => {
     }
   };
 
-  const markAsPurchased = async (id: string, purchasedBy: string) => {
-    const updates = {
-      is_purchased: true,
-      purchased_by: purchasedBy,
-    };
-
-    const result = await updateShoppingItem(id, updates);
-    
-    if (result) {
-      toast({
-        title: "Item marked as purchased! ✅",
-        description: "Thanks for getting the supplies!",
-      });
-    }
-  };
-
   useEffect(() => {
     fetchShoppingItems();
   }, [householdId]);
@@ -172,7 +156,6 @@ export const useShoppingItems = (householdId: string | null) => {
     addShoppingItem,
     updateShoppingItem,
     deleteShoppingItem,
-    markAsPurchased,
     refreshItems: fetchShoppingItems,
   };
 };

@@ -11,12 +11,13 @@ interface ShoppingItemCardProps {
     is_purchased: boolean | null;
     purchased_by: string | null;
   };
+  assignedMember: string;
   onMarkPurchased: (itemId: string) => void;
   onFlagLow: (itemId: string) => void;
   onDelete: (itemId: string) => void;
 }
 
-export const ShoppingItemCard = ({ item, onMarkPurchased, onFlagLow, onDelete }: ShoppingItemCardProps) => {
+export const ShoppingItemCard = ({ item, assignedMember, onMarkPurchased, onFlagLow, onDelete }: ShoppingItemCardProps) => {
   // Determine if item is flagged (has purchased_by but is not purchased)
   const isFlagged = !item.is_purchased && item.purchased_by;
   
@@ -24,8 +25,6 @@ export const ShoppingItemCard = ({ item, onMarkPurchased, onFlagLow, onDelete }:
     <div className={`p-4 border rounded-lg transition-all ${
       isFlagged 
         ? 'border-red-600 bg-red-900/30' 
-        : item.is_purchased
-        ? 'border-green-800 bg-green-900/30' 
         : 'border-gray-700 bg-gray-800/50 hover:bg-gray-700/50'
     }`}>
       <div className="flex items-center justify-between mb-2">
@@ -58,19 +57,14 @@ export const ShoppingItemCard = ({ item, onMarkPurchased, onFlagLow, onDelete }:
       
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {isFlagged && (
-            <span className="text-sm text-red-400">
-              {item.purchased_by}'s responsibility
-            </span>
-          )}
+          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          <span className="text-sm text-gray-300">
+            {assignedMember}'s responsibility
+          </span>
         </div>
         
         <div className="flex gap-2">
-          {item.is_purchased ? (
-            <span className="text-sm text-green-400">
-              ✅ Purchased{item.purchased_by ? ` by ${item.purchased_by}` : ''}
-            </span>
-          ) : isFlagged ? (
+          {isFlagged ? (
             <Button 
               size="sm" 
               onClick={() => onMarkPurchased(item.id)}
