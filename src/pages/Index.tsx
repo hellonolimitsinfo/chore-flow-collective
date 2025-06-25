@@ -180,7 +180,7 @@ const Index = () => {
             <ShoppingSection selectedHouseholdId={selectedHouseholdId} />
           </div>
           <div>
-            <ExpensesSection />
+            <ExpensesSection selectedHouseholdId={selectedHouseholdId} />
           </div>
         </section>
 

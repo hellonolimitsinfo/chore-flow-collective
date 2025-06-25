@@ -113,6 +113,53 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          bank_details: string
+          created_at: string
+          description: string
+          household_id: string
+          id: string
+          owed_by: string[]
+          paid_by: string
+          split_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank_details: string
+          created_at?: string
+          description: string
+          household_id: string
+          id?: string
+          owed_by?: string[]
+          paid_by: string
+          split_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_details?: string
+          created_at?: string
+          description?: string
+          household_id?: string
+          id?: string
+          owed_by?: string[]
+          paid_by?: string
+          split_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       household_invitations: {
         Row: {
           created_at: string
