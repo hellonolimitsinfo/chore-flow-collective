@@ -52,6 +52,13 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     });
   };
 
+  // Handle urgent items "Bought" button - this should just remove the flag, not mark as purchased
+  const handleUrgentItemBought = async (itemId: string) => {
+    await updateShoppingItem(itemId, { 
+      purchased_by: null // Remove the flag, item goes back to normal state
+    });
+  };
+
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
@@ -75,7 +82,7 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     <>
       <UrgentItemsSection 
         flaggedItems={flaggedItems}
-        onMarkPurchased={handleMarkPurchased}
+        onMarkPurchased={handleUrgentItemBought}
       />
 
       <Card className="bg-gray-800/80 border-gray-700">

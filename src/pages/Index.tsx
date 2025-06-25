@@ -10,17 +10,8 @@ import { CreateHouseholdForm } from "@/components/households/CreateHouseholdForm
 import { ChoresSection } from "@/components/ChoresSection";
 import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
-import { UrgentItems } from "@/components/UrgentItems";
+import { HistorySection } from "@/components/HistorySection";
 import { useState } from "react";
-import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
-
-interface ShoppingItem {
-  id: string;
-  name: string;
-  isLow: boolean;
-  flaggedBy?: string;
-  assignedTo: number;
-}
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -122,6 +113,10 @@ const Index = () => {
           <div>
             <ExpensesSection />
           </div>
+        </section>
+
+        <section className="mb-8">
+          <HistorySection selectedHouseholdId={selectedHouseholdId} />
         </section>
       </main>
 

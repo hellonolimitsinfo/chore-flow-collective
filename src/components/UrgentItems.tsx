@@ -1,6 +1,6 @@
-// This component is no longer needed as shopping items are now handled directly in ShoppingSection
-// Keeping this file for now but it can be removed if not used elsewhere
 
+// This component has been replaced by UrgentItemsSection in the shopping folder
+// and HistorySection for tracking completed tasks
 export const UrgentItems = () => {
   return null;
 };
