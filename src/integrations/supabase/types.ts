@@ -9,6 +9,110 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      chore_completions: {
+        Row: {
+          chore_id: string
+          completed_at: string
+          completed_by: string
+          id: string
+          next_assignee_id: string
+        }
+        Insert: {
+          chore_id: string
+          completed_at?: string
+          completed_by: string
+          id?: string
+          next_assignee_id: string
+        }
+        Update: {
+          chore_id?: string
+          completed_at?: string
+          completed_by?: string
+          id?: string
+          next_assignee_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chore_completions_chore_id_fkey"
+            columns: ["chore_id"]
+            isOneToOne: false
+            referencedRelation: "chores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chore_completions_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chore_completions_next_assignee_id_fkey"
+            columns: ["next_assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chores: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_assignee_id: string
+          frequency: string
+          household_id: string
+          id: string
+          last_completed_at: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_assignee_id: string
+          frequency: string
+          household_id: string
+          id?: string
+          last_completed_at?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_assignee_id?: string
+          frequency?: string
+          household_id?: string
+          id?: string
+          last_completed_at?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chores_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chores_current_assignee_id_fkey"
+            columns: ["current_assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chores_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       household_invitations: {
         Row: {
           created_at: string
@@ -155,6 +259,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_next_chore_assignee: {
+        Args: { chore_household_id: string; current_assignee_id: string }
+        Returns: string
+      }
       is_household_member: {
         Args: { hid: string }
         Returns: boolean
