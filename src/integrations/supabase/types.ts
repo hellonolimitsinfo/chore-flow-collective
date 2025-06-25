@@ -241,6 +241,61 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_items: {
+        Row: {
+          assigned_to: string
+          created_at: string
+          flagged_by: string | null
+          household_id: string
+          id: string
+          is_low: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to: string
+          created_at?: string
+          flagged_by?: string | null
+          household_id: string
+          id?: string
+          is_low?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string
+          created_at?: string
+          flagged_by?: string | null
+          household_id?: string
+          id?: string
+          is_low?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       household_member_details: {

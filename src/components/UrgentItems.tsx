@@ -1,13 +1,18 @@
+
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useShoppingItems } from "@/hooks/useShoppingItems";
 
 interface ShoppingItem {
   id: string;
+  household_id: string;
   name: string;
-  isLow: boolean;
-  flaggedBy?: string;
-  assignedTo: number;
+  is_low: boolean;
+  flagged_by?: string;
+  assigned_to: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface HouseholdMember {
@@ -20,11 +25,13 @@ interface HouseholdMember {
 interface UrgentItemsProps {
   shoppingItems: ShoppingItem[];
   members: HouseholdMember[];
-  onShoppingComplete: (itemId: string) => void;
+  selectedHouseholdId: string | null;
 }
 
-export const UrgentItems = ({ shoppingItems, members, onShoppingComplete }: UrgentItemsProps) => {
-  const urgentShoppingItems = shoppingItems.filter(item => item.isLow);
+export const UrgentItems = ({ shoppingItems, members, selectedHouseholdId }: UrgentItemsProps) => {
+  const { markItemAsBought } = useShoppingItems(selectedHouseholdId);
+  
+  const urgentShoppingItems = shoppingItems.filter(item => item.is_low);
 
   if (urgentShoppingItems.length === 0) {
     return null;
@@ -43,8 +50,8 @@ export const UrgentItems = ({ shoppingItems, members, onShoppingComplete }: Urge
     return colors[index];
   };
 
-  const handleBoughtClick = (itemId: string) => {
-    onShoppingComplete(itemId);
+  const handleBoughtClick = async (itemId: string) => {
+    await markItemAsBought(itemId, members);
   };
 
   return (
@@ -57,7 +64,7 @@ export const UrgentItems = ({ shoppingItems, members, onShoppingComplete }: Urge
       </CardHeader>
       <CardContent className="space-y-3">
         {urgentShoppingItems.map((item) => {
-          const assignedMember = members[item.assignedTo % members.length];
+          const assignedMember = members.find(member => member.user_id === item.assigned_to);
           const assigneeName = assignedMember?.full_name || assignedMember?.email || 'Unknown';
           
           return (
@@ -65,7 +72,7 @@ export const UrgentItems = ({ shoppingItems, members, onShoppingComplete }: Urge
               <div className="flex-1">
                 <h4 className="font-medium text-white">{item.name}</h4>
                 <p className="text-sm text-slate-400">
-                  {item.flaggedBy ? `Flagged by ${item.flaggedBy}` : 'Flagged as low stock'}
+                  {item.flagged_by ? `Flagged by ${item.flagged_by}` : 'Flagged as low stock'}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <div className={`w-3 h-3 rounded-full ${getAssigneeColor(assigneeName)}`}></div>

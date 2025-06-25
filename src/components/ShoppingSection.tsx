@@ -1,3 +1,4 @@
+
 import { ShoppingCart, Plus, CheckCircle, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,17 +8,8 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHe
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
-
-interface ShoppingItem {
-  id: string;
-  name: string;
-  isLow: boolean;
-  flaggedBy?: string;
-  assignedTo: number;
-}
+import { useShoppingItems } from "@/hooks/useShoppingItems";
 
 interface ShoppingItemFormValues {
   name: string;
@@ -25,12 +17,20 @@ interface ShoppingItemFormValues {
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
-  onItemsChange?: (items: ShoppingItem[]) => void;
+  onItemsChange?: (items: any[]) => void;
 }
 
 export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: ShoppingSectionProps) => {
-  const { toast } = useToast();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
+  const { 
+    shoppingItems, 
+    loading: itemsLoading, 
+    addShoppingItem, 
+    deleteShoppingItem, 
+    flagItemAsLow, 
+    markItemAsBought,
+    addExampleItems 
+  } = useShoppingItems(selectedHouseholdId);
   
   const shoppingForm = useForm<ShoppingItemFormValues>({
     defaultValues: {
@@ -38,101 +38,36 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
     }
   });
 
-  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  // Notify parent component when items change
+  React.useEffect(() => {
+    onItemsChange?.(shoppingItems);
+  }, [shoppingItems, onItemsChange]);
 
-  const updateItems = (newItems: ShoppingItem[]) => {
-    setShoppingItems(newItems);
-    onItemsChange?.(newItems);
-  };
-
-  const completeShopping = (itemId: string) => {
+  const handleAddItem = async (values: ShoppingItemFormValues) => {
     if (members.length === 0) return;
-
-    const newItems = shoppingItems.map(item => {
-      if (item.id === itemId) {
-        const nextAssignee = (item.assignedTo + 1) % members.length;
-        return {
-          ...item,
-          isLow: false,
-          flaggedBy: undefined,
-          assignedTo: nextAssignee
-        };
-      }
-      return item;
-    });
-
-    updateItems(newItems);
-
-    toast({
-      title: "Shopping completed! 🛒",
-      description: "Thanks for getting the supplies! Assignment rotated.",
-    });
-  };
-
-  const deleteShoppingItem = (itemId: string) => {
-    const newItems = shoppingItems.filter(item => item.id !== itemId);
-    updateItems(newItems);
-    toast({
-      title: "Shopping item deleted",
-      description: "The item has been removed from the list.",
-    });
-  };
-
-  const flagItem = (itemId: string, flaggerName: string) => {
-    const newItems = shoppingItems.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          isLow: true,
-          flaggedBy: flaggerName
-        };
-      }
-      return item;
-    });
-
-    updateItems(newItems);
-
-    toast({
-      title: "Item flagged as low! ⚠️",
-      description: `${flaggerName} flagged this item as running low.`,
-    });
-  };
-
-  const addNewShoppingItem = (values: ShoppingItemFormValues) => {
-    const newItem: ShoppingItem = {
-      id: `${Date.now()}`,
-      name: values.name,
-      isLow: false,
-      assignedTo: 0
-    };
     
-    const newItems = [...shoppingItems, newItem];
-    updateItems(newItems);
-    
-    toast({
-      title: "New shopping item added! 🛒",
-      description: `${values.name} has been added to the shopping list.`,
-    });
-    
-    shoppingForm.reset();
+    const success = await addShoppingItem(values.name, members[0].user_id);
+    if (success) {
+      shoppingForm.reset();
+    }
   };
 
-  const addExampleItems = () => {
+  const handleDeleteItem = async (itemId: string) => {
+    await deleteShoppingItem(itemId);
+  };
+
+  const handleFlagItem = async (itemId: string) => {
     if (members.length === 0) return;
+    const flaggerName = members[0]?.full_name || members[0]?.email || 'Someone';
+    await flagItemAsLow(itemId, flaggerName);
+  };
 
-    const exampleItems: ShoppingItem[] = [
-      { id: `${Date.now()}-1`, name: "Toilet Paper", isLow: false, assignedTo: 0 },
-      { id: `${Date.now()}-2`, name: "Dish Soap", isLow: false, assignedTo: 1 % members.length },
-      { id: `${Date.now()}-3`, name: "Milk", isLow: false, assignedTo: 2 % members.length },
-      { id: `${Date.now()}-4`, name: "Cleaning Supplies", isLow: false, assignedTo: 3 % members.length },
-    ];
+  const handleMarkAsBought = async (itemId: string) => {
+    await markItemAsBought(itemId, members);
+  };
 
-    updateItems(exampleItems);
-
-    toast({
-      title: "Example shopping items added! 🛒",
-      description: "Sample items have been added to get you started.",
-    });
+  const handleAddExamples = async () => {
+    await addExampleItems(members);
   };
 
   const getAssigneeColor = (assigneeName: string) => {
@@ -150,6 +85,24 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
+
+  if (itemsLoading) {
+    return (
+      <Card className="bg-gray-800/80 border-gray-700">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-gray-100 text-lg">
+            <ShoppingCart className="h-5 w-5" />
+            Shopping Items
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-gray-400 text-center py-4">
+            Loading shopping items...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-gray-800/80 border-gray-700">
@@ -185,7 +138,7 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
             </SheetHeader>
             <div className="py-6">
               <Form {...shoppingForm}>
-                <form onSubmit={shoppingForm.handleSubmit(addNewShoppingItem)} className="space-y-6">
+                <form onSubmit={shoppingForm.handleSubmit(handleAddItem)} className="space-y-6">
                   <FormItem>
                     <FormLabel className="text-gray-200">Item Name</FormLabel>
                     <FormControl>
@@ -213,7 +166,7 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
         {shouldShowExamplesButton && (
           <div className="mb-4">
             <Button 
-              onClick={addExampleItems}
+              onClick={handleAddExamples}
               variant="outline" 
               className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 text-sm"
             >
@@ -237,17 +190,17 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
         ) : (
           <div className="space-y-4">
             {shoppingItems.map(item => {
-              const assignedMember = members[item.assignedTo % members.length];
+              const assignedMember = members.find(member => member.user_id === item.assigned_to);
               const assigneeName = assignedMember?.full_name || assignedMember?.email || 'Unknown';
               
               return (
                 <div key={item.id} className={`p-4 border rounded-lg transition-all ${
-                  item.isLow ? 'border-red-800 bg-red-900/30' : 'border-gray-700 bg-gray-800/50 hover:bg-gray-700/50'
+                  item.is_low ? 'border-red-800 bg-red-900/30' : 'border-gray-700 bg-gray-800/50 hover:bg-gray-700/50'
                 }`}>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-gray-200">{item.name}</h3>
                     <div className="flex items-center gap-2">
-                      {item.isLow && (
+                      {item.is_low && (
                         <Badge variant="destructive" className="text-xs">
                           Low Stock
                         </Badge>
@@ -260,7 +213,7 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
                           <DropdownMenuItem 
-                            onClick={() => deleteShoppingItem(item.id)}
+                            onClick={() => handleDeleteItem(item.id)}
                             className="text-red-400 hover:text-red-300 hover:bg-gray-700"
                           >
                             Delete
@@ -279,21 +232,21 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
                     </div>
                     
                     <div className="flex gap-2">
-                      {!item.isLow && (
+                      {!item.is_low && (
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => flagItem(item.id, members[0]?.full_name || members[0]?.email || 'Someone')}
+                          onClick={() => handleFlagItem(item.id)}
                           className="border-gray-600 text-gray-300 hover:bg-gray-700"
                         >
                           <AlertTriangle className="h-4 w-4 mr-1" />
                           Flag Low
                         </Button>
                       )}
-                      {item.isLow && (
+                      {item.is_low && (
                         <Button 
                           size="sm" 
-                          onClick={() => completeShopping(item.id)}
+                          onClick={() => handleMarkAsBought(item.id)}
                           className="bg-green-700 hover:bg-green-800"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />

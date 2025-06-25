@@ -27,7 +27,7 @@ const Index = () => {
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
-  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  const [urgentShoppingItems, setUrgentShoppingItems] = useState<ShoppingItem[]>([]);
   const { members } = useHouseholdMembers(selectedHouseholdId);
   
   // Handle invitation processing
@@ -62,24 +62,9 @@ const Index = () => {
   };
 
   const handleShoppingItemsChange = (items: ShoppingItem[]) => {
-    setShoppingItems(items);
-  };
-
-  const handleShoppingComplete = (itemId: string) => {
-    if (members.length === 0) return;
-
-    setShoppingItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const nextAssignee = (item.assignedTo + 1) % members.length;
-        return {
-          ...item,
-          isLow: false,
-          flaggedBy: undefined,
-          assignedTo: nextAssignee
-        };
-      }
-      return item;
-    }));
+    // Filter items that are flagged as low for the urgent items section
+    const lowStockItems = items.filter(item => item.is_low);
+    setUrgentShoppingItems(lowStockItems);
   };
 
   return (
@@ -137,9 +122,9 @@ const Index = () => {
 
         <section className="mb-8">
           <UrgentItems 
-            shoppingItems={shoppingItems}
+            shoppingItems={urgentShoppingItems}
             members={members}
-            onShoppingComplete={handleShoppingComplete}
+            selectedHouseholdId={selectedHouseholdId}
           />
         </section>
 
