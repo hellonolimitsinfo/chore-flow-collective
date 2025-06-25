@@ -18,7 +18,6 @@ interface AddChoreDialogProps {
 interface ChoreFormData {
   name: string;
   frequency: string;
-  assigneeId: string;
 }
 
 export const AddChoreDialog = ({ isOpen, onClose, onAddChore, householdMembers }: AddChoreDialogProps) => {
@@ -27,17 +26,18 @@ export const AddChoreDialog = ({ isOpen, onClose, onAddChore, householdMembers }
   const form = useForm<ChoreFormData>({
     defaultValues: {
       name: "",
-      frequency: "weekly",
-      assigneeId: ""
+      frequency: "weekly"
     }
   });
 
   const handleSubmit = async (data: ChoreFormData) => {
-    if (isSubmitting) return;
+    if (isSubmitting || householdMembers.length === 0) return;
 
     setIsSubmitting(true);
     try {
-      await onAddChore(data.name, data.frequency, data.assigneeId);
+      // Automatically assign to the first household member
+      const firstMember = householdMembers[0];
+      await onAddChore(data.name, data.frequency, firstMember.user_id);
       form.reset();
       onClose();
     } catch (error) {
@@ -104,32 +104,6 @@ export const AddChoreDialog = ({ isOpen, onClose, onAddChore, householdMembers }
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="assigneeId"
-              rules={{ required: "Please select an assignee" }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign to</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                        <SelectValue placeholder="Select person" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-slate-700 border-slate-600">
-                      {householdMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          {member.full_name || 'Unknown'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
@@ -141,7 +115,7 @@ export const AddChoreDialog = ({ isOpen, onClose, onAddChore, householdMembers }
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || householdMembers.length === 0}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isSubmitting ? "Adding..." : "Add Chore"}

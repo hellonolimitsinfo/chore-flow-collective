@@ -47,7 +47,7 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
             size="sm" 
             className="bg-blue-600 hover:bg-blue-700"
             onClick={() => setShowAddDialog(true)}
-            disabled={!selectedHouseholdId}
+            disabled={!selectedHouseholdId || members.length === 0}
           >
             <Plus className="w-4 h-4 mr-1" />
             Add Chore

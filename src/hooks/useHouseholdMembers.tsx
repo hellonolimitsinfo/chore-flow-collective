@@ -23,7 +23,7 @@ export const useHouseholdMembers = (householdId: string | null) => {
         .select(`
           user_id,
           role,
-          profiles!household_members_user_id_fkey(full_name, email)
+          profiles(full_name, email)
         `)
         .eq('household_id', householdId);
 
