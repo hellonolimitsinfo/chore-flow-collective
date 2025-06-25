@@ -380,6 +380,41 @@ export type Database = {
           },
         ]
       }
+      shopping_logs: {
+        Row: {
+          action: string
+          created_at: string
+          household_id: string
+          id: string
+          item_name: string
+          member_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          household_id: string
+          id?: string
+          item_name: string
+          member_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          household_id?: string
+          id?: string
+          item_name?: string
+          member_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_logs_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       household_member_details: {

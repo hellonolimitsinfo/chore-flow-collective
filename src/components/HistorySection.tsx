@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart, CreditCard, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,9 +51,15 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
 
       if (choreError) throw choreError;
 
-      // Temporarily disabled shopping logs until table is created
-      // TODO: Re-enable after creating shopping_logs table
-      const shoppingLogs: any[] = [];
+      // Fetch shopping logs
+      const { data: shoppingLogs, error: shoppingError } = await supabase
+        .from('shopping_logs')
+        .select('id, action, item_name, member_name, created_at')
+        .eq('household_id', selectedHouseholdId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (shoppingError) throw shoppingError;
 
       // Fetch payment logs
       const { data: paymentLogs, error: paymentError } = await supabase
@@ -75,7 +80,13 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
         completed_at: completion.completed_at,
       }));
 
-      const shoppingHistory: HistoryItem[] = []; // Temporarily empty until shopping_logs table is created
+      const shoppingHistory: HistoryItem[] = (shoppingLogs || []).map(log => ({
+        id: log.id,
+        type: log.action === 'purchased' ? 'shopping_purchased' as const : 'shopping_flagged' as const,
+        name: log.item_name,
+        completed_by: log.member_name,
+        completed_at: log.created_at,
+      }));
 
       const paymentHistory: HistoryItem[] = (paymentLogs || []).map(log => ({
         id: log.id,

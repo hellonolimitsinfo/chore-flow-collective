@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
@@ -24,10 +25,24 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   } = useShoppingItems(selectedHouseholdId);
   const { toast } = useToast();
 
-  // Temporarily disabled until shopping_logs table is created
+  // Log shopping actions to the shopping_logs table
   const logShoppingAction = async (action: string, itemName: string, memberName: string) => {
-    // TODO: Re-enable after creating shopping_logs table
-    console.log(`Shopping action: ${action} - ${itemName} by ${memberName}`);
+    if (!selectedHouseholdId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('shopping_logs')
+        .insert({
+          household_id: selectedHouseholdId,
+          action,
+          item_name: itemName,
+          member_name: memberName
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error logging shopping action:', error);
+    }
   };
 
   const addExampleItems = async () => {
