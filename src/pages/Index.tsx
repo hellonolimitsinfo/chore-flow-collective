@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -11,6 +12,8 @@ import { ChoresSection } from "@/components/ChoresSection";
 import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
+import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
+import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useState } from "react";
 
 const Index = () => {
@@ -21,6 +24,9 @@ const Index = () => {
   
   // Handle invitation processing
   useInvitationHandler();
+
+  // Get shopping items for urgent section
+  const { shoppingItems, updateShoppingItem } = useShoppingItems(selectedHouseholdId);
 
   if (loading) {
     return (
@@ -50,6 +56,32 @@ const Index = () => {
     return await deleteHousehold(householdId);
   };
 
+  // Handle urgent items "Bought" button - clear flag and log to history
+  const handleUrgentItemBought = async (itemId: string) => {
+    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    
+    try {
+      // First, log this as a purchase in history by temporarily marking as purchased
+      await updateShoppingItem(itemId, { 
+        is_purchased: true,
+        purchased_by: currentUserName
+      });
+
+      // Then immediately revert to normal state (unflagged, unpurchased)
+      setTimeout(async () => {
+        await updateShoppingItem(itemId, { 
+          is_purchased: false,
+          purchased_by: null
+        });
+      }, 100);
+    } catch (error) {
+      console.error('Error handling urgent item bought:', error);
+    }
+  };
+
+  // Get flagged items (items that have purchased_by set but are not purchased)
+  const flaggedItems = shoppingItems.filter(item => !item.is_purchased && item.purchased_by);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4">
@@ -60,10 +92,10 @@ const Index = () => {
           }} />
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
+          <h1 className="text-4xl font-bold flex items-center justify-center gap-2 mb-2">
             🏠 Flatmate Flow
           </h1>
-          <p className="text-slate-300 text-sm mt-1">Keep track of chores, shopping, and responsibilities</p>
+          <p className="text-slate-300 text-lg">Keep track of chores, shopping, and responsibilities</p>
         </div>
       </header>
 
@@ -101,6 +133,14 @@ const Index = () => {
               No households yet. Create one to get started!
             </div>
           )}
+        </section>
+
+        {/* Urgent Items Section - Separate Row */}
+        <section className="mb-8">
+          <UrgentItemsSection 
+            flaggedItems={flaggedItems}
+            onMarkPurchased={handleUrgentItemBought}
+          />
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">

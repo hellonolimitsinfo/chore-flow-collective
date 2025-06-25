@@ -1,3 +1,4 @@
+
 import { ShoppingCart, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,6 @@ import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useAuth } from "@/hooks/useAuth";
 import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
-import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -54,39 +54,6 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     });
   };
 
-  // Handle urgent items "Bought" button - clear flag and log to history
-  const handleUrgentItemBought = async (itemId: string) => {
-    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
-    
-    try {
-      // First, log this as a purchase in history by temporarily marking as purchased
-      await updateShoppingItem(itemId, { 
-        is_purchased: true,
-        purchased_by: currentUserName
-      });
-
-      // Then immediately revert to normal state (unflagged, unpurchased)
-      setTimeout(async () => {
-        await updateShoppingItem(itemId, { 
-          is_purchased: false,
-          purchased_by: null
-        });
-      }, 100);
-
-      toast({
-        title: "Item purchased! ✅",
-        description: "Thanks for getting the supplies!",
-      });
-    } catch (error) {
-      console.error('Error handling urgent item bought:', error);
-      toast({
-        title: "Error",
-        description: "Could not update item status.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
@@ -97,9 +64,6 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
-  // Get flagged items (items that have purchased_by set but are not purchased)
-  const flaggedItems = shoppingItems.filter(item => !item.is_purchased && item.purchased_by);
-
   const getDisabledTitle = () => {
     if (!selectedHouseholdId) return "Select a household first";
     if (members.length === 0) return "No household members found";
@@ -107,68 +71,61 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   };
 
   return (
-    <>
-      <UrgentItemsSection 
-        flaggedItems={flaggedItems}
-        onMarkPurchased={handleUrgentItemBought}
-      />
-
-      <Card className="bg-gray-800/80 border-gray-700">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="flex items-center gap-2 text-gray-100 text-lg">
-            <ShoppingCart className="h-5 w-5" />
-            Shopping Items
-          </CardTitle>
-          <AddShoppingItemSheet
-            isDisabled={isAddButtonDisabled}
-            disabledTitle={getDisabledTitle()}
-            onAddItem={addShoppingItem}
-          />
-        </CardHeader>
-        <CardContent>
-          {shouldShowExamplesButton && (
-            <div className="mb-4">
-              <Button 
-                onClick={addExampleItems}
-                variant="outline" 
-                className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 text-sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Examples
-              </Button>
-            </div>
-          )}
-          {!selectedHouseholdId ? (
-            <div className="text-gray-400 text-center py-4">
-              Select a household to view shopping items
-            </div>
-          ) : members.length === 0 ? (
-            <div className="text-gray-400 text-center py-4">
-              No household members found
-            </div>
-          ) : loading ? (
-            <div className="text-gray-400 text-center py-4">
-              Loading shopping items...
-            </div>
-          ) : shoppingItems.length === 0 ? (
-            <div className="text-gray-400 text-center py-4">
-              No shopping items yet. Add some to get started!
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {sortedItems.map(item => (
-                <ShoppingItemCard
-                  key={item.id}
-                  item={item}
-                  onMarkPurchased={handleMarkPurchased}
-                  onFlagLow={handleFlagLow}
-                  onDelete={deleteShoppingItem}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
+    <Card className="bg-gray-800/80 border-gray-700">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="flex items-center gap-2 text-gray-100 text-lg">
+          <ShoppingCart className="h-5 w-5" />
+          Shopping Items
+        </CardTitle>
+        <AddShoppingItemSheet
+          isDisabled={isAddButtonDisabled}
+          disabledTitle={getDisabledTitle()}
+          onAddItem={addShoppingItem}
+        />
+      </CardHeader>
+      <CardContent>
+        {shouldShowExamplesButton && (
+          <div className="mb-4">
+            <Button 
+              onClick={addExampleItems}
+              variant="outline" 
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 text-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Examples
+            </Button>
+          </div>
+        )}
+        {!selectedHouseholdId ? (
+          <div className="text-gray-400 text-center py-4">
+            Select a household to view shopping items
+          </div>
+        ) : members.length === 0 ? (
+          <div className="text-gray-400 text-center py-4">
+            No household members found
+          </div>
+        ) : loading ? (
+          <div className="text-gray-400 text-center py-4">
+            Loading shopping items...
+          </div>
+        ) : shoppingItems.length === 0 ? (
+          <div className="text-gray-400 text-center py-4">
+            No shopping items yet. Add some to get started!
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {sortedItems.map(item => (
+              <ShoppingItemCard
+                key={item.id}
+                item={item}
+                onMarkPurchased={handleMarkPurchased}
+                onFlagLow={handleFlagLow}
+                onDelete={deleteShoppingItem}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
