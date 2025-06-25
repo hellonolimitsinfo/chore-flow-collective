@@ -261,6 +261,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_logs: {
+        Row: {
+          action: string
+          created_at: string
+          expense_description: string
+          expense_id: string
+          household_id: string
+          id: string
+          member_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          expense_description: string
+          expense_id: string
+          household_id: string
+          id?: string
+          member_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          expense_description?: string
+          expense_id?: string
+          household_id?: string
+          id?: string
+          member_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_logs_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_logs_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

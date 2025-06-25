@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface HistoryItem {
   id: string;
-  type: 'chore' | 'shopping';
+  type: 'chore' | 'shopping' | 'payment_claimed' | 'payment_confirmed';
   name: string;
   completed_by: string;
   completed_at: string;
+  expense_description?: string;
 }
 
 interface HistorySectionProps {
@@ -62,6 +63,16 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
 
       if (shoppingError) throw shoppingError;
 
+      // Fetch payment logs
+      const { data: paymentLogs, error: paymentError } = await supabase
+        .from('payment_logs')
+        .select('id, member_name, action, expense_description, created_at')
+        .eq('household_id', selectedHouseholdId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (paymentError) throw paymentError;
+
       // Combine and format the data
       const choreHistory: HistoryItem[] = (choreCompletions || []).map(completion => ({
         id: completion.id,
@@ -79,8 +90,17 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
         completed_at: item.updated_at,
       }));
 
+      const paymentHistory: HistoryItem[] = (paymentLogs || []).map(log => ({
+        id: log.id,
+        type: log.action === 'claimed' ? 'payment_claimed' as const : 'payment_confirmed' as const,
+        name: log.expense_description,
+        completed_by: log.member_name,
+        completed_at: log.created_at,
+        expense_description: log.expense_description,
+      }));
+
       // Combine and sort by date
-      const allHistory = [...choreHistory, ...shoppingHistory]
+      const allHistory = [...choreHistory, ...shoppingHistory, ...paymentHistory]
         .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
 
       setHistoryItems(allHistory);
@@ -121,6 +141,36 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
     }
   };
 
+  const getItemIcon = (type: string) => {
+    switch (type) {
+      case 'chore':
+        return <CheckCircle className="h-5 w-5 text-green-400" />;
+      case 'shopping':
+        return <ShoppingCart className="h-5 w-5 text-blue-400" />;
+      case 'payment_claimed':
+        return <CreditCard className="h-5 w-5 text-yellow-400" />;
+      case 'payment_confirmed':
+        return <CreditCard className="h-5 w-5 text-green-400" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  const getItemDescription = (item: HistoryItem) => {
+    switch (item.type) {
+      case 'chore':
+        return `Completed by ${item.completed_by}`;
+      case 'shopping':
+        return `Purchased by ${item.completed_by}`;
+      case 'payment_claimed':
+        return `${item.completed_by} says they paid`;
+      case 'payment_confirmed':
+        return `Payment confirmed from ${item.completed_by}`;
+      default:
+        return `By ${item.completed_by}`;
+    }
+  };
+
   if (!selectedHouseholdId) {
     return null;
   }
@@ -158,11 +208,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
                 {historyItems.map(item => (
                   <div key={`${item.type}-${item.id}`} className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg bg-gray-800/50">
                     <div className="flex-shrink-0">
-                      {item.type === 'chore' ? (
-                        <CheckCircle className="h-5 w-5 text-green-400" />
-                      ) : (
-                        <ShoppingCart className="h-5 w-5 text-blue-400" />
-                      )}
+                      {getItemIcon(item.type)}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
@@ -172,7 +218,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
                         </span>
                       </div>
                       <p className="text-sm text-gray-400">
-                        {item.type === 'chore' ? 'Completed' : 'Purchased'} by {item.completed_by}
+                        {getItemDescription(item)}
                       </p>
                     </div>
                   </div>

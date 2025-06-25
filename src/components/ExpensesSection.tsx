@@ -534,72 +534,70 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                         <span className="text-orange-400">
                           {debt.name} owes £{debt.amount.toFixed(2)}
                         </span>
-                        <div className="flex gap-2">
-                          {pendingPayments[expense.id]?.includes(debt.name) ? (
-                            <div className="flex gap-2">
-                              <span className="text-yellow-400 text-xs">
-                                {debt.name} says paid
-                              </span>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 px-2 text-xs border-green-600 text-green-400 hover:bg-green-700"
-                                  >
-                                    Confirm Payment
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="bg-gray-800 border-gray-700">
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-gray-100">Confirm Payment</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-gray-400">
-                                      Are you sure you want to confirm that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => handleConfirmPayment(expense.id, debt.name, expense.description)}
-                                      className="bg-green-700 hover:bg-green-800"
-                                    >
-                                      Confirm
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          ) : (
+                        {pendingPayments[expense.id]?.includes(debt.name) ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-yellow-400 text-xs">
+                              Says paid
+                            </span>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-6 px-2 text-xs border-blue-600 text-blue-400 hover:bg-blue-700"
+                                  className="h-6 px-2 text-xs border-green-600 text-green-400 hover:bg-green-700"
                                 >
-                                  Paid
+                                  Confirm
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="bg-gray-800 border-gray-700">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-gray-100">Mark as Paid</AlertDialogTitle>
+                                  <AlertDialogTitle className="text-gray-100">Confirm Payment</AlertDialogTitle>
                                   <AlertDialogDescription className="text-gray-400">
-                                    Are you sure you want to mark that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
+                                    Are you sure you want to confirm that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
                                   <AlertDialogAction 
-                                    onClick={() => handleMarkAsPaid(expense.id, debt.name, expense.description)}
-                                    className="bg-blue-700 hover:bg-blue-800"
+                                    onClick={() => handleConfirmPayment(expense.id, debt.name, expense.description)}
+                                    className="bg-green-700 hover:bg-green-800"
                                   >
-                                    Mark as Paid
+                                    Confirm
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 px-2 text-xs border-blue-600 text-blue-400 hover:bg-blue-700"
+                              >
+                                Paid
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-gray-800 border-gray-700">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-gray-100">Mark as Paid</AlertDialogTitle>
+                                <AlertDialogDescription className="text-gray-400">
+                                  Are you sure you want to mark that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleMarkAsPaid(expense.id, debt.name, expense.description)}
+                                  className="bg-blue-700 hover:bg-blue-800"
+                                >
+                                  Mark as Paid
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     ))}
                   </div>
