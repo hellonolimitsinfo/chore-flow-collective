@@ -14,6 +14,7 @@ import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
 import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
+import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useState } from "react";
 
 const Index = () => {
@@ -25,8 +26,9 @@ const Index = () => {
   // Handle invitation processing
   useInvitationHandler();
 
-  // Get shopping items for urgent section
+  // Get shopping items and members for urgent section
   const { shoppingItems, updateShoppingItem } = useShoppingItems(selectedHouseholdId);
+  const { members } = useHouseholdMembers(selectedHouseholdId);
 
   if (loading) {
     return (
@@ -56,14 +58,49 @@ const Index = () => {
     return await deleteHousehold(householdId);
   };
 
-  // Handle urgent items "Bought" button - reset to default state
+  const getNextMember = (currentMemberName: string) => {
+    if (members.length === 0) return null;
+    
+    // Find current member index
+    const currentIndex = members.findIndex(member => 
+      (member.full_name || member.email) === currentMemberName
+    );
+    
+    // Get next member (rotate to beginning if at end)
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % members.length;
+    const nextMember = members[nextIndex];
+    
+    return nextMember.full_name || nextMember.email;
+  };
+
+  // Handle urgent items "Bought" button - mark as purchased and rotate to next person
   const handleUrgentItemBought = async (itemId: string) => {
+    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    const item = shoppingItems.find(i => i.id === itemId);
+    
+    if (!item) return;
+    
     try {
-      // Reset item to default state (unflagged, unpurchased)
+      const nextMember = getNextMember(item.purchased_by || '');
+      
+      // Mark as purchased
       await updateShoppingItem(itemId, { 
-        is_purchased: false,
-        purchased_by: null
+        is_purchased: true,
+        purchased_by: currentUserName
       });
+      
+      // Add new item for next person if there are members
+      if (nextMember && selectedHouseholdId) {
+        const { addShoppingItem } = require('@/hooks/useShoppingItems');
+        // This is a workaround - ideally we'd have access to addShoppingItem here
+        // For now, we'll just reset the current item for the next person
+        setTimeout(async () => {
+          await updateShoppingItem(itemId, {
+            is_purchased: false,
+            purchased_by: nextMember
+          });
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error handling urgent item bought:', error);
     }
@@ -126,12 +163,14 @@ const Index = () => {
         </section>
 
         {/* Urgent Items Section - Separate Row */}
-        <section className="mb-8">
-          <UrgentItemsSection 
-            flaggedItems={flaggedItems}
-            onMarkPurchased={handleUrgentItemBought}
-          />
-        </section>
+        {flaggedItems.length > 0 && (
+          <section className="mb-8">
+            <UrgentItemsSection 
+              flaggedItems={flaggedItems}
+              onMarkPurchased={handleUrgentItemBought}
+            />
+          </section>
+        )}
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           <div>

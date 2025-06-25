@@ -42,23 +42,47 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     }
   };
 
+  const getNextMember = (currentMemberName: string) => {
+    if (members.length === 0) return null;
+    
+    // Find current member index
+    const currentIndex = members.findIndex(member => 
+      (member.full_name || member.email) === currentMemberName
+    );
+    
+    // Get next member (rotate to beginning if at end)
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % members.length;
+    const nextMember = members[nextIndex];
+    
+    return nextMember.full_name || nextMember.email;
+  };
+
   const handleMarkPurchased = async (itemId: string) => {
-    // For flagged items (in urgent section), reset to default state
     const item = shoppingItems.find(i => i.id === itemId);
-    if (item && !item.is_purchased && item.purchased_by) {
-      // This is a flagged item, reset it to default state
+    if (!item) return;
+
+    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    
+    if (!item.is_purchased && item.purchased_by) {
+      // This is a flagged item - mark as purchased and rotate to next person
+      const nextMember = getNextMember(item.purchased_by);
+      
       await updateShoppingItem(itemId, { 
-        is_purchased: false,
-        purchased_by: null
+        is_purchased: true,
+        purchased_by: currentUserName // Track who actually bought it
       });
+      
+      // Create a new item with the same name for the next person
+      if (nextMember) {
+        await addShoppingItem(item.name);
+      }
       
       toast({
         title: "Item purchased! ✅",
-        description: "Item has been reset to default state.",
+        description: `${item.name} bought by ${currentUserName}. ${nextMember ? `New item assigned to ${nextMember}` : ''}`,
       });
-    } else {
-      // Regular purchase flow for non-flagged items
-      const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    } else if (!item.is_purchased && !item.purchased_by) {
+      // Regular item - mark as purchased
       await markAsPurchased(itemId, currentUserName);
     }
   };

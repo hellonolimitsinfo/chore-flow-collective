@@ -58,9 +58,6 @@ export const ShoppingItemCard = ({ item, onMarkPurchased, onFlagLow, onDelete }:
       
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-300">
-            Quantity: {item.quantity}
-          </span>
           {isFlagged && (
             <span className="text-sm text-red-400">
               {item.purchased_by}'s responsibility
