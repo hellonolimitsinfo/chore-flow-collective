@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export const useInvitationHandler = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth(); // add loading if available
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -39,6 +39,8 @@ export const useInvitationHandler = () => {
       }
       
       console.log('Processing invitation:', { inviteEmail, householdId, userEmail: user?.email });
+
+      if (loading) return; // wait until auth is done loading
       
       // If user is not logged in, redirect to auth page with invitation params preserved
       if (!user) {
