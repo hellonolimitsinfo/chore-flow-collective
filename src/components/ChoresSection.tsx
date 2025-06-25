@@ -80,6 +80,7 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
   };
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
+  const showExamplesButton = selectedHouseholdId && members.length > 0 && chores.length === 0 && !loading;
 
   return (
     <>
@@ -107,27 +108,20 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
           </Button>
         </CardHeader>
         
-        <div className="px-6 pb-2">
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="h-8 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-gray-200 disabled:bg-slate-600 disabled:cursor-not-allowed"
-            onClick={handleAddExamples}
-            disabled={isAddButtonDisabled || isAddingExamples || chores.length > 0}
-            title={
-              !selectedHouseholdId 
-                ? "Select a household first" 
-                : members.length === 0 
-                  ? "No household members found"
-                : chores.length > 0
-                  ? "Examples only available when no chores exist"
-                  : "Add example chores to get started"
-            }
-          >
-            <Sparkles className="h-4 w-4 mr-1" />
-            {isAddingExamples ? "Adding..." : "Add Examples"}
-          </Button>
-        </div>
+        {showExamplesButton && (
+          <div className="px-6 pb-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="h-8 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-gray-200 disabled:bg-slate-600 disabled:cursor-not-allowed"
+              onClick={handleAddExamples}
+              disabled={isAddingExamples}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {isAddingExamples ? "Adding..." : "Add Examples"}
+            </Button>
+          </div>
+        )}
 
         <CardContent>
           {loading ? (
