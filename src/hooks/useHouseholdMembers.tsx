@@ -20,47 +20,32 @@ export const useHouseholdMembers = (householdId: string | null) => {
       setLoading(true);
       console.log('Fetching members for household:', householdId);
       
-      // First get household members
-      const { data: householdMembers, error: membersError } = await supabase
+      // Use a single query with proper join to get both member and profile data
+      const { data, error } = await supabase
         .from('household_members')
-        .select('user_id, role')
+        .select(`
+          user_id,
+          role,
+          profiles!inner(
+            full_name,
+            email
+          )
+        `)
         .eq('household_id', householdId);
 
-      if (membersError) {
-        console.error('Error fetching household members:', membersError);
-        throw membersError;
+      if (error) {
+        console.error('Error fetching household members:', error);
+        throw error;
       }
 
-      console.log('Household members:', householdMembers);
+      console.log('Raw data from query:', data);
 
-      // Then get profile data for each member
-      const membersWithProfiles: HouseholdMember[] = [];
-      
-      for (const member of householdMembers || []) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name, email')
-          .eq('id', member.user_id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile for user:', member.user_id, profileError);
-          // Continue with partial data
-          membersWithProfiles.push({
-            user_id: member.user_id,
-            role: member.role || 'member',
-            full_name: null,
-            email: 'Unknown'
-          });
-        } else {
-          membersWithProfiles.push({
-            user_id: member.user_id,
-            role: member.role || 'member',
-            full_name: profile?.full_name || null,
-            email: profile?.email || 'Unknown'
-          });
-        }
-      }
+      const membersWithProfiles: HouseholdMember[] = (data || []).map((member: any) => ({
+        user_id: member.user_id,
+        role: member.role || 'member',
+        full_name: member.profiles?.full_name || null,
+        email: member.profiles?.email || 'Unknown'
+      }));
 
       console.log('Members with profiles:', membersWithProfiles);
       setMembers(membersWithProfiles);
