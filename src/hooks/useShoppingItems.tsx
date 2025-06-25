@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +11,7 @@ type ShoppingItem = {
   quantity: number | null;
   is_purchased: boolean | null;
   purchased_by: string | null;
-  assigned_member_index: number | null;
+  assigned_member_index?: number | null; // Make this optional since it doesn't exist in DB yet
   created_at: string;
   updated_at: string;
 };
@@ -47,7 +46,14 @@ export const useShoppingItems = (householdId: string | null) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setShoppingItems(data || []);
+      
+      // Transform the data to include assigned_member_index if missing
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        assigned_member_index: item.assigned_member_index ?? null
+      }));
+      
+      setShoppingItems(transformedData);
     } catch (error) {
       console.error('Error fetching shopping items:', error);
       toast({
@@ -80,13 +86,19 @@ export const useShoppingItems = (householdId: string | null) => {
 
       if (error) throw error;
 
-      setShoppingItems(prev => [data, ...prev]);
+      // Transform the returned data to include assigned_member_index
+      const transformedData = {
+        ...data,
+        assigned_member_index: data.assigned_member_index ?? 0
+      };
+
+      setShoppingItems(prev => [transformedData, ...prev]);
       toast({
         title: "Shopping item added! 🛒",
         description: `${name} has been added to the shopping list.`,
       });
 
-      return data;
+      return transformedData;
     } catch (error) {
       console.error('Error adding shopping item:', error);
       toast({
@@ -109,11 +121,17 @@ export const useShoppingItems = (householdId: string | null) => {
 
       if (error) throw error;
 
+      // Transform the returned data to include assigned_member_index
+      const transformedData = {
+        ...data,
+        assigned_member_index: data.assigned_member_index ?? updates.assigned_member_index ?? null
+      };
+
       setShoppingItems(prev => 
-        prev.map(item => item.id === id ? data : item)
+        prev.map(item => item.id === id ? transformedData : item)
       );
 
-      return data;
+      return transformedData;
     } catch (error) {
       console.error('Error updating shopping item:', error);
       toast({
