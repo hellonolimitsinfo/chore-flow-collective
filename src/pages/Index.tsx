@@ -45,24 +45,22 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <header className="p-4 flex justify-between items-center">
-        <div className="text-center flex-1">
+      <header className="p-4">
+        <div className="flex justify-end mb-4">
+          <UserMenu user={{ 
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            email: user.email || ''
+          }} />
+        </div>
+        <div className="text-center">
           <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
             🏠 Flatmate Flow
           </h1>
           <p className="text-slate-300 text-sm mt-1">Keep track of chores, shopping, and responsibilities</p>
         </div>
-        <UserMenu user={{ 
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          email: user.email || ''
-        }} />
       </header>
 
       <main className="container mx-auto p-4">
-        <section className="mb-8">
-          <UrgentItems />
-        </section>
-
         <section className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -96,16 +94,17 @@ const Index = () => {
           )}
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
+        <section className="mb-8">
+          <UrgentItems />
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+          <div>
             <ChoresSection />
           </div>
           <div>
             <ShoppingSection />
           </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
           <div>
             <ExpensesSection />
           </div>
