@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,19 @@ type ShoppingItemInsert = {
   assigned_member_index?: number | null;
 };
 
+// Type for database response (without assigned_member_index)
+type DatabaseShoppingItem = {
+  id: string;
+  household_id: string;
+  name: string;
+  category: string | null;
+  quantity: number | null;
+  is_purchased: boolean | null;
+  purchased_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export const useShoppingItems = (householdId: string | null) => {
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,9 +62,9 @@ export const useShoppingItems = (householdId: string | null) => {
       if (error) throw error;
       
       // Transform the data to include assigned_member_index if missing
-      const transformedData = (data || []).map(item => ({
+      const transformedData = (data as DatabaseShoppingItem[] || []).map(item => ({
         ...item,
-        assigned_member_index: item.assigned_member_index ?? null
+        assigned_member_index: (item as any).assigned_member_index ?? null
       }));
       
       setShoppingItems(transformedData);
@@ -89,7 +103,7 @@ export const useShoppingItems = (householdId: string | null) => {
       // Transform the returned data to include assigned_member_index
       const transformedData = {
         ...data,
-        assigned_member_index: data.assigned_member_index ?? 0
+        assigned_member_index: (data as any).assigned_member_index ?? 0
       };
 
       setShoppingItems(prev => [transformedData, ...prev]);
@@ -124,7 +138,7 @@ export const useShoppingItems = (householdId: string | null) => {
       // Transform the returned data to include assigned_member_index
       const transformedData = {
         ...data,
-        assigned_member_index: data.assigned_member_index ?? updates.assigned_member_index ?? null
+        assigned_member_index: (data as any).assigned_member_index ?? updates.assigned_member_index ?? null
       };
 
       setShoppingItems(prev => 
