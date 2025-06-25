@@ -1,21 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-
-export interface Chore {
-  id: string;
-  household_id: string;
-  name: string;
-  frequency: string;
-  current_assignee_id: string;
-  created_at: string;
-  updated_at: string;
-  last_completed_at: string | null;
-  created_by: string;
-  assignee_name?: string;
-}
+import { Chore } from '@/types/chore';
+import { choreService } from '@/services/choreService';
 
 export const useChores = (householdId: string | null) => {
   const { user } = useAuth();
@@ -28,22 +16,8 @@ export const useChores = (householdId: string | null) => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('chores')
-        .select(`
-          *,
-          profiles!chores_current_assignee_id_fkey(full_name)
-        `)
-        .eq('household_id', householdId);
-
-      if (error) throw error;
-
-      const choresWithNames = data?.map(chore => ({
-        ...chore,
-        assignee_name: chore.profiles?.full_name || 'Unknown'
-      })) || [];
-
-      setChores(choresWithNames);
+      const choresData = await choreService.fetchChores(householdId);
+      setChores(choresData);
     } catch (error) {
       console.error('Error fetching chores:', error);
       toast({
@@ -60,20 +34,8 @@ export const useChores = (householdId: string | null) => {
     if (!householdId || !user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('chores')
-        .insert({
-          household_id: householdId,
-          name,
-          frequency,
-          current_assignee_id: assigneeId,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      const data = await choreService.createChore(householdId, name, frequency, assigneeId, user.id);
+      
       toast({
         title: "Success",
         description: "Chore created successfully"
@@ -96,47 +58,8 @@ export const useChores = (householdId: string | null) => {
     if (!user) return false;
 
     try {
-      // Get the chore details first
-      const { data: chore, error: choreError } = await supabase
-        .from('chores')
-        .select('*')
-        .eq('id', choreId)
-        .single();
-
-      if (choreError) throw choreError;
-
-      // Get next assignee using the database function
-      const { data: nextAssigneeId, error: nextAssigneeError } = await supabase
-        .rpc('get_next_chore_assignee', {
-          chore_household_id: chore.household_id,
-          current_assignee_id: chore.current_assignee_id
-        });
-
-      if (nextAssigneeError) throw nextAssigneeError;
-
-      // Record the completion
-      const { error: completionError } = await supabase
-        .from('chore_completions')
-        .insert({
-          chore_id: choreId,
-          completed_by: user.id,
-          next_assignee_id: nextAssigneeId
-        });
-
-      if (completionError) throw completionError;
-
-      // Update the chore with new assignee and completion time
-      const { error: updateError } = await supabase
-        .from('chores')
-        .update({
-          current_assignee_id: nextAssigneeId,
-          last_completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', choreId);
-
-      if (updateError) throw updateError;
-
+      await choreService.completeChore(choreId, user.id);
+      
       toast({
         title: "Chore completed! 🎉",
         description: "Great job! The task has been rotated to the next person."
@@ -159,22 +82,8 @@ export const useChores = (householdId: string | null) => {
     if (!user) return false;
 
     try {
-      // First delete any related completions
-      const { error: completionsError } = await supabase
-        .from('chore_completions')
-        .delete()
-        .eq('chore_id', choreId);
-
-      if (completionsError) throw completionsError;
-
-      // Then delete the chore
-      const { error } = await supabase
-        .from('chores')
-        .delete()
-        .eq('id', choreId);
-
-      if (error) throw error;
-
+      await choreService.deleteChore(choreId);
+      
       toast({
         title: "Success",
         description: "Chore deleted successfully"

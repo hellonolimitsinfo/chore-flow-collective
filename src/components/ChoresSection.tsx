@@ -91,10 +91,21 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
             <div className="space-y-4">
               {chores.map((chore) => (
                 <div key={chore.id} className="p-4 border rounded-lg border-gray-700 bg-gray-800/50 hover:bg-gray-700/50 transition-colors">
-                  <div className="flex items-start justify-between mb-3 gap-2">
-                    <h3 className="font-medium text-gray-200 flex-1">{chore.name}</h3>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge variant="secondary" className="bg-gray-700 text-gray-300 text-xs">{chore.frequency}</Badge>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`w-3 h-3 rounded-full ${getAssigneeColor(chore.assignee_name || '')}`}></div>
+                      <div>
+                        <h3 className="font-medium text-gray-200">{chore.name}</h3>
+                        <span className="text-sm text-gray-300">
+                          {chore.assignee_name}'s turn
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-gray-700 text-gray-300 text-xs">
+                        {chore.frequency}
+                      </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700">
@@ -113,18 +124,11 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${getAssigneeColor(chore.assignee_name || '')}`}></div>
-                      <span className="text-sm font-medium text-gray-300">
-                        {chore.assignee_name}'s turn
-                      </span>
-                    </div>
-                    
+                  <div className="flex justify-end">
                     <Button 
                       size="sm" 
                       onClick={() => handleCompleteChore(chore.id)}
-                      className="bg-green-700 hover:bg-green-800 w-full sm:w-auto"
+                      className="bg-green-700 hover:bg-green-800"
                     >
                       <CheckCircle className="h-4 w-4 mr-1" />
                       Done
