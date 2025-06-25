@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -14,16 +13,21 @@ import { ExpensesSection } from "@/components/ExpensesSection";
 import { UrgentItems } from "@/components/UrgentItems";
 import { useState } from "react";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
-import { Database } from "@/integrations/supabase/types";
 
-type ShoppingItem = Database["public"]["Tables"]["shopping_items"]["Row"];
+interface ShoppingItem {
+  id: string;
+  name: string;
+  isLow: boolean;
+  flaggedBy?: string;
+  assignedTo: number;
+}
 
 const Index = () => {
   const { user, loading } = useAuth();
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
-  const [urgentShoppingItems, setUrgentShoppingItems] = useState<ShoppingItem[]>([]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const { members } = useHouseholdMembers(selectedHouseholdId);
   
   // Handle invitation processing
@@ -58,9 +62,24 @@ const Index = () => {
   };
 
   const handleShoppingItemsChange = (items: ShoppingItem[]) => {
-    // Filter items that are flagged as low for the urgent items section
-    const lowStockItems = items.filter(item => item.is_low);
-    setUrgentShoppingItems(lowStockItems);
+    setShoppingItems(items);
+  };
+
+  const handleShoppingComplete = (itemId: string) => {
+    if (members.length === 0) return;
+
+    setShoppingItems(prev => prev.map(item => {
+      if (item.id === itemId) {
+        const nextAssignee = (item.assignedTo + 1) % members.length;
+        return {
+          ...item,
+          isLow: false,
+          flaggedBy: undefined,
+          assignedTo: nextAssignee
+        };
+      }
+      return item;
+    }));
   };
 
   return (
@@ -118,9 +137,9 @@ const Index = () => {
 
         <section className="mb-8">
           <UrgentItems 
-            shoppingItems={urgentShoppingItems}
+            shoppingItems={shoppingItems}
             members={members}
-            selectedHouseholdId={selectedHouseholdId}
+            onShoppingComplete={handleShoppingComplete}
           />
         </section>
 
