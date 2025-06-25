@@ -138,8 +138,8 @@ export const useChores = (householdId: string | null) => {
       if (updateError) throw updateError;
 
       toast({
-        title: "Success",
-        description: "Chore completed and rotated to next person"
+        title: "Chore completed! 🎉",
+        description: "Great job! The task has been rotated to the next person."
       });
 
       fetchChores(); // Refresh the list
@@ -155,6 +155,44 @@ export const useChores = (householdId: string | null) => {
     }
   };
 
+  const deleteChore = async (choreId: string) => {
+    if (!user) return false;
+
+    try {
+      // First delete any related completions
+      const { error: completionsError } = await supabase
+        .from('chore_completions')
+        .delete()
+        .eq('chore_id', choreId);
+
+      if (completionsError) throw completionsError;
+
+      // Then delete the chore
+      const { error } = await supabase
+        .from('chores')
+        .delete()
+        .eq('id', choreId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Chore deleted successfully"
+      });
+
+      fetchChores(); // Refresh the list
+      return true;
+    } catch (error) {
+      console.error('Error deleting chore:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete chore",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchChores();
   }, [householdId, user]);
@@ -164,6 +202,7 @@ export const useChores = (householdId: string | null) => {
     loading,
     createChore,
     completeChore,
+    deleteChore,
     refetch: fetchChores
   };
 };

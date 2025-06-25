@@ -7,6 +7,12 @@ import { useState } from "react";
 import { AddChoreDialog } from "@/components/chores/AddChoreDialog";
 import { useChores } from "@/hooks/useChores";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface ChoresSectionProps {
   selectedHouseholdId: string | null;
@@ -14,7 +20,7 @@ interface ChoresSectionProps {
 
 export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { chores, loading, createChore, completeChore } = useChores(selectedHouseholdId);
+  const { chores, loading, createChore, completeChore, deleteChore } = useChores(selectedHouseholdId);
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
 
   const handleAddChore = async (name: string, frequency: string, assigneeId: string) => {
@@ -25,14 +31,22 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
     await completeChore(choreId);
   };
 
-  const getFrequencyColor = (frequency: string) => {
-    switch (frequency) {
-      case 'daily': return 'text-red-400';
-      case 'weekly': return 'text-blue-400';
-      case 'bi-weekly': return 'text-green-400';
-      case 'monthly': return 'text-purple-400';
-      default: return 'text-slate-400';
-    }
+  const handleDeleteChore = async (choreId: string) => {
+    await deleteChore(choreId);
+  };
+
+  const getAssigneeColor = (assigneeName: string) => {
+    // Generate consistent colors based on name
+    const colors = [
+      'bg-purple-500',
+      'bg-green-500', 
+      'bg-blue-500',
+      'bg-orange-500',
+      'bg-pink-500',
+      'bg-indigo-500'
+    ];
+    const index = assigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
   };
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
@@ -75,30 +89,47 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
             </div>
           ) : (
             chores.map((chore) => (
-              <div key={chore.id} className="p-3 bg-slate-700/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-white">{chore.name}</h4>
-                  <Button size="sm" variant="ghost" className="text-slate-400">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-slate-300 border-slate-600">
-                      {chore.frequency}
-                    </Badge>
-                    <span className={`text-sm ${getFrequencyColor(chore.frequency)}`}>
-                      {chore.assignee_name}'s turn
-                    </span>
+              <div key={chore.id} className="p-4 bg-slate-700 rounded-lg">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-white text-lg mb-2">{chore.name}</h4>
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="outline" className="text-slate-300 border-slate-500 bg-slate-600">
+                        {chore.frequency}
+                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${getAssigneeColor(chore.assignee_name || '')}`}></div>
+                        <span className="text-sm text-slate-300">
+                          {chore.assignee_name}'s turn
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <Button 
-                    size="sm" 
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => handleCompleteChore(chore.id)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Done
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => handleCompleteChore(chore.id)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Done
+                    </Button>
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-600">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="bg-slate-700 border-slate-600">
+                        <ContextMenuItem 
+                          className="text-red-400 hover:text-red-300 hover:bg-slate-600 cursor-pointer"
+                          onClick={() => handleDeleteChore(chore.id)}
+                        >
+                          Delete
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  </div>
                 </div>
               </div>
             ))
