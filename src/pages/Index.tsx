@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -113,7 +112,7 @@ const Index = () => {
             <ChoresSection selectedHouseholdId={selectedHouseholdId} />
           </div>
           <div>
-            <ShoppingSection />
+            <ShoppingSection selectedHouseholdId={selectedHouseholdId} />
           </div>
           <div>
             <ExpensesSection />
