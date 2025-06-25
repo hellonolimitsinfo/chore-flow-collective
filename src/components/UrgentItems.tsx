@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 
-interface ShoppingItem {
+interface DatabaseShoppingItem {
   id: string;
   household_id: string;
   name: string;
@@ -23,7 +23,7 @@ interface HouseholdMember {
 }
 
 interface UrgentItemsProps {
-  shoppingItems: ShoppingItem[];
+  shoppingItems: DatabaseShoppingItem[];
   members: HouseholdMember[];
   selectedHouseholdId: string | null;
 }
