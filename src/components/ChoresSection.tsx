@@ -1,5 +1,5 @@
 
-import { Calendar, Plus, CheckCircle, MoreHorizontal } from "lucide-react";
+import { Calendar, Plus, CheckCircle, MoreHorizontal, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ interface ChoresSectionProps {
 
 export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [isAddingExamples, setIsAddingExamples] = useState(false);
   const { chores, loading, createChore, completeChore, deleteChore } = useChores(selectedHouseholdId);
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
 
@@ -33,6 +34,35 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
 
   const handleDeleteChore = async (choreId: string) => {
     await deleteChore(choreId);
+  };
+
+  const handleAddExamples = async () => {
+    if (!selectedHouseholdId || members.length === 0 || isAddingExamples) return;
+
+    setIsAddingExamples(true);
+    
+    const exampleChores = [
+      { name: "Take out bins", frequency: "weekly" },
+      { name: "Clean bathroom", frequency: "bi-weekly" },
+      { name: "Vacuum living room", frequency: "weekly" },
+      { name: "Clean kitchen", frequency: "weekly" }
+    ];
+
+    try {
+      // Distribute chores among household members
+      for (let i = 0; i < exampleChores.length; i++) {
+        const assignee = members[i % members.length];
+        await createChore(
+          exampleChores[i].name,
+          exampleChores[i].frequency,
+          assignee.user_id
+        );
+      }
+    } catch (error) {
+      console.error('Error adding example chores:', error);
+    } finally {
+      setIsAddingExamples(false);
+    }
   };
 
   const getAssigneeColor = (assigneeName: string) => {
@@ -76,6 +106,29 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
             <span className="hidden sm:inline">Add Chore</span>
           </Button>
         </CardHeader>
+        
+        <div className="px-6 pb-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="h-8 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-gray-200 disabled:bg-slate-600 disabled:cursor-not-allowed"
+            onClick={handleAddExamples}
+            disabled={isAddButtonDisabled || isAddingExamples || chores.length > 0}
+            title={
+              !selectedHouseholdId 
+                ? "Select a household first" 
+                : members.length === 0 
+                  ? "No household members found"
+                : chores.length > 0
+                  ? "Examples only available when no chores exist"
+                  : "Add example chores to get started"
+            }
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            {isAddingExamples ? "Adding..." : "Add Examples"}
+          </Button>
+        </div>
+
         <CardContent>
           {loading ? (
             <div className="text-gray-400 text-center py-4">Loading chores...</div>
