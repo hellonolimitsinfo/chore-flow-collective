@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -12,12 +13,23 @@ import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { UrgentItems } from "@/components/UrgentItems";
 import { useState } from "react";
+import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
+
+interface ShoppingItem {
+  id: string;
+  name: string;
+  isLow: boolean;
+  flaggedBy?: string;
+  assignedTo: number;
+}
 
 const Index = () => {
   const { user, loading } = useAuth();
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  const { members } = useHouseholdMembers(selectedHouseholdId);
   
   // Handle invitation processing
   useInvitationHandler();
@@ -48,6 +60,25 @@ const Index = () => {
 
   const handleDeleteHousehold = async (householdId: string) => {
     return await deleteHousehold(householdId);
+  };
+
+  const handleShoppingItemsChange = (items: ShoppingItem[]) => {
+    setShoppingItems(items);
+  };
+
+  const handleShoppingComplete = (itemId: string) => {
+    setShoppingItems(prev => prev.map(item => {
+      if (item.id === itemId) {
+        const nextAssignee = (item.assignedTo + 1) % members.length;
+        return {
+          ...item,
+          isLow: false,
+          flaggedBy: undefined,
+          assignedTo: nextAssignee
+        };
+      }
+      return item;
+    }));
   };
 
   return (
@@ -104,7 +135,11 @@ const Index = () => {
         </section>
 
         <section className="mb-8">
-          <UrgentItems />
+          <UrgentItems 
+            shoppingItems={shoppingItems}
+            members={members}
+            onShoppingComplete={handleShoppingComplete}
+          />
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
@@ -112,7 +147,10 @@ const Index = () => {
             <ChoresSection selectedHouseholdId={selectedHouseholdId} />
           </div>
           <div>
-            <ShoppingSection selectedHouseholdId={selectedHouseholdId} />
+            <ShoppingSection 
+              selectedHouseholdId={selectedHouseholdId} 
+              onItemsChange={handleShoppingItemsChange}
+            />
           </div>
           <div>
             <ExpensesSection />

@@ -26,9 +26,10 @@ interface ShoppingItemFormValues {
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
+  onItemsChange?: (items: ShoppingItem[]) => void;
 }
 
-export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) => {
+export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: ShoppingSectionProps) => {
   const { toast } = useToast();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
   
@@ -38,17 +39,17 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     }
   });
 
-  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([
-    { id: "1", name: "Toilet Paper", isLow: true, flaggedBy: "Example User", assignedTo: 0 },
-    { id: "2", name: "Dish Soap", isLow: false, assignedTo: 0 },
-    { id: "3", name: "Milk", isLow: true, flaggedBy: "Example User", assignedTo: 0 },
-    { id: "4", name: "Cleaning Supplies", isLow: false, assignedTo: 0 },
-  ]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+
+  const updateItems = (newItems: ShoppingItem[]) => {
+    setShoppingItems(newItems);
+    onItemsChange?.(newItems);
+  };
 
   const completeShopping = (itemId: string) => {
     if (members.length === 0) return;
 
-    setShoppingItems(prev => prev.map(item => {
+    const newItems = shoppingItems.map(item => {
       if (item.id === itemId) {
         const nextAssignee = (item.assignedTo + 1) % members.length;
         return {
@@ -59,7 +60,9 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
         };
       }
       return item;
-    }));
+    });
+
+    updateItems(newItems);
 
     toast({
       title: "Shopping completed! 🛒",
@@ -68,7 +71,8 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   };
 
   const deleteShoppingItem = (itemId: string) => {
-    setShoppingItems(prev => prev.filter(item => item.id !== itemId));
+    const newItems = shoppingItems.filter(item => item.id !== itemId);
+    updateItems(newItems);
     toast({
       title: "Shopping item deleted",
       description: "The item has been removed from the list.",
@@ -76,7 +80,7 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   };
 
   const flagItem = (itemId: string, flaggerName: string) => {
-    setShoppingItems(prev => prev.map(item => {
+    const newItems = shoppingItems.map(item => {
       if (item.id === itemId) {
         return {
           ...item,
@@ -85,7 +89,9 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
         };
       }
       return item;
-    }));
+    });
+
+    updateItems(newItems);
 
     toast({
       title: "Item flagged as low! ⚠️",
@@ -95,13 +101,14 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
 
   const addNewShoppingItem = (values: ShoppingItemFormValues) => {
     const newItem: ShoppingItem = {
-      id: `${shoppingItems.length + 1}`,
+      id: `${Date.now()}`,
       name: values.name,
       isLow: false,
       assignedTo: 0
     };
     
-    setShoppingItems(prev => [...prev, newItem]);
+    const newItems = [...shoppingItems, newItem];
+    updateItems(newItems);
     
     toast({
       title: "New shopping item added! 🛒",
@@ -111,8 +118,25 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     shoppingForm.reset();
   };
 
+  const addExampleItems = () => {
+    if (members.length === 0) return;
+
+    const exampleItems: ShoppingItem[] = [
+      { id: `${Date.now()}-1`, name: "Toilet Paper", isLow: false, assignedTo: 0 },
+      { id: `${Date.now()}-2`, name: "Dish Soap", isLow: false, assignedTo: 1 % members.length },
+      { id: `${Date.now()}-3`, name: "Milk", isLow: false, assignedTo: 2 % members.length },
+      { id: `${Date.now()}-4`, name: "Cleaning Supplies", isLow: false, assignedTo: 3 % members.length },
+    ];
+
+    updateItems(exampleItems);
+
+    toast({
+      title: "Example shopping items added! 🛒",
+      description: "Sample items have been added to get you started.",
+    });
+  };
+
   const getAssigneeColor = (assigneeName: string) => {
-    // Generate consistent colors based on name
     const colors = [
       'bg-blue-500',
       'bg-green-500', 
@@ -126,6 +150,7 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   };
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
+  const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
   return (
     <Card className="bg-gray-800/80 border-gray-700">
@@ -186,6 +211,18 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
         </Sheet>
       </CardHeader>
       <CardContent>
+        {shouldShowExamplesButton && (
+          <div className="mb-4">
+            <Button 
+              onClick={addExampleItems}
+              variant="outline" 
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Examples
+            </Button>
+          </div>
+        )}
         {!selectedHouseholdId ? (
           <div className="text-gray-400 text-center py-4">
             Select a household to view shopping items
@@ -193,6 +230,10 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
         ) : members.length === 0 ? (
           <div className="text-gray-400 text-center py-4">
             No household members found
+          </div>
+        ) : shoppingItems.length === 0 ? (
+          <div className="text-gray-400 text-center py-4">
+            No shopping items yet. Add some to get started!
           </div>
         ) : (
           <div className="space-y-4">
