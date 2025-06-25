@@ -1,4 +1,3 @@
-
 import { ShoppingCart, Plus, CheckCircle, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -216,11 +215,9 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
             <Button 
               onClick={addExampleItems}
               variant="outline" 
-              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 flex items-center justify-center gap-2"
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 text-sm"
             >
-              <div className="flex items-center justify-center w-5 h-5 text-gray-400">
-                ⚙️
-              </div>
+              <Plus className="h-4 w-4 mr-2" />
               Add Examples
             </Button>
           </div>

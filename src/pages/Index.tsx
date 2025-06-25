@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -67,6 +66,8 @@ const Index = () => {
   };
 
   const handleShoppingComplete = (itemId: string) => {
+    if (members.length === 0) return;
+
     setShoppingItems(prev => prev.map(item => {
       if (item.id === itemId) {
         const nextAssignee = (item.assignedTo + 1) % members.length;
