@@ -1,4 +1,3 @@
-
 import { Users, Settings, Trash2, UserPlus, Edit3, UserMinus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import type { Household } from "@/types/household";
 import { InviteMemberModal } from "@/components/households/InviteMemberModal";
 import { HouseholdMembersModal } from "@/components/households/HouseholdMembersModal";
 import { RenameHouseholdModal } from "@/components/households/RenameHouseholdModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HouseholdCardProps {
   household: Household;
@@ -25,6 +25,7 @@ export const HouseholdCard = ({
   onRename,
   onRemoveMember 
 }: HouseholdCardProps) => {
+  const { t } = useLanguage();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -74,51 +75,52 @@ export const HouseholdCard = ({
                 <p className="text-sm text-slate-400 mt-1">{household.description}</p>
               )}
             </div>
-            <div className="flex space-x-1">
+            <div className="flex flex-wrap gap-2">
               {canInvite && (
                 <Button 
-                  size="sm" 
-                  variant="ghost" 
+                  size="default" 
+                  variant="outline" 
                   onClick={handleInviteMembers}
-                  className="text-green-400 hover:text-green-300"
-                  title="Add Members"
+                  className="text-green-400 hover:text-green-300 border-green-400 hover:border-green-300 px-3 py-2"
+                  title={t('add_members')}
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add
                 </Button>
               )}
               {canManageMembers && (
                 <Button 
-                  size="sm" 
-                  variant="ghost" 
+                  size="default" 
+                  variant="outline" 
                   onClick={handleViewMembers}
-                  className="text-blue-400 hover:text-blue-300"
-                  title="Manage Members"
+                  className="text-blue-400 hover:text-blue-300 border-blue-400 hover:border-blue-300 px-3 py-2"
+                  title={t('manage_members')}
                 >
-                  <UserMinus className="w-4 h-4" />
+                  <UserMinus className="w-4 h-4 mr-2" />
+                  Manage
                 </Button>
               )}
               {canRename && (
                 <Button 
-                  size="sm" 
-                  variant="ghost" 
+                  size="default" 
+                  variant="outline" 
                   onClick={handleRename}
-                  className="text-orange-400 hover:text-orange-300"
-                  title="Rename Household"
+                  className="text-orange-400 hover:text-orange-300 border-orange-400 hover:border-orange-300 px-3 py-2"
+                  title={t('rename_household')}
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Rename
                 </Button>
               )}
-              <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white">
-                <Settings className="w-4 h-4" />
-              </Button>
               {canDelete && (
                 <Button 
-                  size="sm" 
-                  variant="ghost" 
+                  size="default" 
+                  variant="outline" 
                   onClick={handleDelete}
-                  className="text-red-400 hover:text-red-300"
+                  className="text-red-400 hover:text-red-300 border-red-400 hover:border-red-300 px-3 py-2"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
                 </Button>
               )}
             </div>
@@ -126,7 +128,7 @@ export const HouseholdCard = ({
           <div className="flex items-center text-slate-400">
             <Users className="w-4 h-4 mr-2" />
             <div className="flex flex-col">
-              <span>{household.member_count || 0} members</span>
+              <span>{household.member_count || 0} {t('members')}</span>
               {household.members && household.members.length > 0 && (
                 <div className="text-xs text-slate-500 mt-1">
                   {household.members.map((member, index) => (
@@ -139,7 +141,7 @@ export const HouseholdCard = ({
               )}
             </div>
             {household.user_role === 'admin' && (
-              <span className="ml-auto px-2 py-1 text-xs bg-blue-600 text-white rounded">Admin</span>
+              <span className="ml-auto px-2 py-1 text-xs bg-blue-600 text-white rounded">{t('admin')}</span>
             )}
           </div>
         </CardContent>

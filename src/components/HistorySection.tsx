@@ -1,15 +1,15 @@
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart, CreditCard } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart, CreditCard, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HistoryItem {
   id: string;
-  type: 'chore' | 'shopping' | 'payment_claimed' | 'payment_confirmed';
+  type: 'chore' | 'shopping_purchased' | 'shopping_flagged' | 'payment_claimed' | 'payment_confirmed';
   name: string;
   completed_by: string;
   completed_at: string;
@@ -21,6 +21,7 @@ interface HistorySectionProps {
 }
 
 export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,14 +52,12 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
 
       if (choreError) throw choreError;
 
-      // Fetch purchased shopping items
-      const { data: shoppingItems, error: shoppingError } = await supabase
-        .from('shopping_items')
-        .select('id, name, purchased_by, updated_at')
+      // Fetch shopping logs
+      const { data: shoppingLogs, error: shoppingError } = await supabase
+        .from('shopping_logs')
+        .select('id, action, item_name, member_name, created_at')
         .eq('household_id', selectedHouseholdId)
-        .eq('is_purchased', true)
-        .not('purchased_by', 'is', null)
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(20);
 
       if (shoppingError) throw shoppingError;
@@ -82,12 +81,12 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
         completed_at: completion.completed_at,
       }));
 
-      const shoppingHistory: HistoryItem[] = (shoppingItems || []).map(item => ({
-        id: item.id,
-        type: 'shopping' as const,
-        name: item.name,
-        completed_by: item.purchased_by!,
-        completed_at: item.updated_at,
+      const shoppingHistory: HistoryItem[] = (shoppingLogs || []).map(log => ({
+        id: log.id,
+        type: log.action === 'purchased' ? 'shopping_purchased' as const : 'shopping_flagged' as const,
+        name: log.item_name,
+        completed_by: log.member_name,
+        completed_at: log.created_at,
       }));
 
       const paymentHistory: HistoryItem[] = (paymentLogs || []).map(log => ({
@@ -122,31 +121,26 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
     }
   }, [selectedHouseholdId, isOpen]);
 
-  const formatDate = (dateString: string) => {
+  const formatExactDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return "Just now";
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      if (diffInDays < 7) {
-        return `${diffInDays}d ago`;
-      } else {
-        return date.toLocaleDateString();
-      }
-    }
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
   const getItemIcon = (type: string) => {
     switch (type) {
       case 'chore':
         return <CheckCircle className="h-5 w-5 text-green-400" />;
-      case 'shopping':
+      case 'shopping_purchased':
         return <ShoppingCart className="h-5 w-5 text-blue-400" />;
+      case 'shopping_flagged':
+        return <Flag className="h-5 w-5 text-yellow-400" />;
       case 'payment_claimed':
         return <CreditCard className="h-5 w-5 text-yellow-400" />;
       case 'payment_confirmed':
@@ -159,13 +153,15 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
   const getItemDescription = (item: HistoryItem) => {
     switch (item.type) {
       case 'chore':
-        return `Completed by ${item.completed_by}`;
-      case 'shopping':
-        return `Purchased by ${item.completed_by}`;
+        return `${t('completed_by')} ${item.completed_by}`;
+      case 'shopping_purchased':
+        return `${t('purchased_by')} ${item.completed_by}`;
+      case 'shopping_flagged':
+        return `${t('flagged_by')} ${item.completed_by}`;
       case 'payment_claimed':
-        return `${item.completed_by} says they paid`;
+        return `${item.completed_by} ${t('says_paid')}`;
       case 'payment_confirmed':
-        return `Payment confirmed from ${item.completed_by}`;
+        return `${t('payment_confirmed')} ${item.completed_by}`;
       default:
         return `By ${item.completed_by}`;
     }
@@ -183,7 +179,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
             <CardTitle className="flex items-center justify-between text-gray-100 text-lg">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                History
+                {t('history')}
               </div>
               {isOpen ? (
                 <ChevronDown className="h-5 w-5 text-gray-400" />
@@ -197,7 +193,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
           <CardContent>
             {loading ? (
               <div className="text-gray-400 text-center py-4">
-                Loading history...
+                {t('loading')}
               </div>
             ) : historyItems.length === 0 ? (
               <div className="text-gray-400 text-center py-4">
@@ -211,15 +207,16 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
                       {getItemIcon(item.type)}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-1">
                         <h4 className="font-medium text-gray-200">{item.name}</h4>
-                        <span className="text-xs text-gray-400">
-                          {formatDate(item.completed_at)}
-                        </span>
                       </div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-gray-400 mb-1">
                         {getItemDescription(item)}
                       </p>
+                      <div className="text-xs text-gray-500">
+                        {item.type.includes('payment') && `${t('date_created')}: `}
+                        {formatExactDate(item.completed_at)}
+                      </div>
                     </div>
                   </div>
                 ))}

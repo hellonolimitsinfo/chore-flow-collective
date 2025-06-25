@@ -13,12 +13,15 @@ import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
 import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useState } from "react";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
@@ -33,7 +36,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+        <div className="text-white text-xl">{t('loading')}</div>
       </div>
     );
   }
@@ -112,7 +115,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4">
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <LanguageToggle />
           <UserMenu user={{ 
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
             email: user.email || ''
@@ -120,9 +124,9 @@ const Index = () => {
         </div>
         <div className="text-center">
           <h1 className="text-5xl font-bold flex items-center justify-center gap-2 mb-2">
-            🏠 Flatmate Flow
+            🏠 {t('flatmate_flow')}
           </h1>
-          <p className="text-slate-300 text-xl">Keep track of chores, shopping, and responsibilities</p>
+          <p className="text-slate-300 text-xl">{t('tagline')}</p>
         </div>
       </header>
 
@@ -131,16 +135,16 @@ const Index = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Your Households
+              {t('your_households')}
             </h2>
             <Button onClick={() => setShowCreateForm(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Create New
+              {t('create_new')}
             </Button>
           </div>
 
           {householdsLoading ? (
-            <div className="text-white">Loading households...</div>
+            <div className="text-white">{t('loading')}</div>
           ) : households.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {households.map((household) => (
@@ -157,7 +161,7 @@ const Index = () => {
             </div>
           ) : (
             <div className="text-slate-400">
-              No households yet. Create one to get started!
+              {t('no_households')}
             </div>
           )}
         </section>

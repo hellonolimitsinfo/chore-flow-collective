@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
@@ -24,6 +25,21 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     updateShoppingItem 
   } = useShoppingItems(selectedHouseholdId);
   const { toast } = useToast();
+
+  const logShoppingAction = async (action: string, itemName: string, memberName: string) => {
+    if (!selectedHouseholdId) return;
+    
+    try {
+      await supabase.from('shopping_logs').insert({
+        household_id: selectedHouseholdId,
+        action,
+        item_name: itemName,
+        member_name: memberName
+      });
+    } catch (error) {
+      console.error('Error logging shopping action:', error);
+    }
+  };
 
   const addExampleItems = async () => {
     if (!selectedHouseholdId) return;
@@ -80,8 +96,8 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     const nextMember = members[nextMemberIndex];
     const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
     
-    // Log to history (console for now)
-    console.log(`Shopping item purchased - ${item.name} bought by ${currentUserName} at ${new Date().toISOString()}`);
+    // Log the shopping action
+    await logShoppingAction('purchased', item.name, currentUserName);
     
     // Reset item to default state and assign to next person
     await updateShoppingItem(itemId, { 
@@ -98,6 +114,12 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
 
   const handleFlagLow = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    const item = shoppingItems.find(i => i.id === itemId);
+    if (!item) return;
+    
+    // Log the shopping action
+    await logShoppingAction('flagged_low', item.name, currentUserName);
+    
     await updateShoppingItem(itemId, { 
       purchased_by: currentUserName
     });
