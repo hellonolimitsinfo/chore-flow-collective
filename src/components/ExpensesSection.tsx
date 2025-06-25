@@ -194,6 +194,17 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     return currentMember?.full_name || currentMember?.email || '';
   };
 
+  const shouldShowPaidButton = (expense: any, debtorName: string) => {
+    const currentUserName = getCurrentUserName();
+    const isPayer = currentUserName === expense.paid_by;
+    const isDebtor = currentUserName === debtorName;
+    
+    // Show button if:
+    // 1. Current user is the payer (they can mark when they receive payments)
+    // 2. Current user is the debtor (they can claim they've paid)
+    return isPayer || isDebtor;
+  };
+
   const getTotalIndividualAmount = () => {
     return Object.values(watchIndividualAmounts).reduce((sum, amount) => {
       return sum + (parseFloat(amount as string) || 0);
@@ -540,8 +551,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                     </div>
                     <div className="space-y-2">
                       {calculateDebts(expense).map(debt => {
-                        const isCurrentUserOwing = debt.name === currentUserName;
-                        const showPaidButton = !isCurrentUserOwing; // Only show if it's NOT the current user
+                        const showPaidButton = shouldShowPaidButton(expense, debt.name);
                         
                         return (
                           <div key={debt.name} className="flex items-center justify-between text-sm">
