@@ -43,8 +43,24 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   };
 
   const handleMarkPurchased = async (itemId: string) => {
-    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
-    await markAsPurchased(itemId, currentUserName);
+    // For flagged items (in urgent section), reset to default state
+    const item = shoppingItems.find(i => i.id === itemId);
+    if (item && !item.is_purchased && item.purchased_by) {
+      // This is a flagged item, reset it to default state
+      await updateShoppingItem(itemId, { 
+        is_purchased: false,
+        purchased_by: null
+      });
+      
+      toast({
+        title: "Item purchased! ✅",
+        description: "Item has been reset to default state.",
+      });
+    } else {
+      // Regular purchase flow for non-flagged items
+      const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+      await markAsPurchased(itemId, currentUserName);
+    }
   };
 
   const handleFlagLow = async (itemId: string) => {
@@ -62,10 +78,19 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
-  // Sort items: unpurchased first, then purchased at the bottom
+  // Sort items: flagged first, then unpurchased, then purchased at the bottom
   const sortedItems = [...shoppingItems].sort((a, b) => {
+    // Flagged items (has purchased_by but not purchased) first
+    const aFlagged = !a.is_purchased && a.purchased_by;
+    const bFlagged = !b.is_purchased && b.purchased_by;
+    
+    if (aFlagged && !bFlagged) return -1;
+    if (!aFlagged && bFlagged) return 1;
+    
+    // Then sort by purchased status
     if (a.is_purchased && !b.is_purchased) return 1;
     if (!a.is_purchased && b.is_purchased) return -1;
+    
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 

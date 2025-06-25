@@ -22,10 +22,10 @@ export const ShoppingItemCard = ({ item, onMarkPurchased, onFlagLow, onDelete }:
   
   return (
     <div className={`p-4 border rounded-lg transition-all ${
-      item.is_purchased 
-        ? 'border-green-800 bg-green-900/30' 
-        : isFlagged 
+      isFlagged 
         ? 'border-red-600 bg-red-900/30' 
+        : item.is_purchased
+        ? 'border-green-800 bg-green-900/30' 
         : 'border-gray-700 bg-gray-800/50 hover:bg-gray-700/50'
     }`}>
       <div className="flex items-center justify-between mb-2">

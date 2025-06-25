@@ -56,24 +56,14 @@ const Index = () => {
     return await deleteHousehold(householdId);
   };
 
-  // Handle urgent items "Bought" button - clear flag and log to history
+  // Handle urgent items "Bought" button - reset to default state
   const handleUrgentItemBought = async (itemId: string) => {
-    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
-    
     try {
-      // First, log this as a purchase in history by temporarily marking as purchased
+      // Reset item to default state (unflagged, unpurchased)
       await updateShoppingItem(itemId, { 
-        is_purchased: true,
-        purchased_by: currentUserName
+        is_purchased: false,
+        purchased_by: null
       });
-
-      // Then immediately revert to normal state (unflagged, unpurchased)
-      setTimeout(async () => {
-        await updateShoppingItem(itemId, { 
-          is_purchased: false,
-          purchased_by: null
-        });
-      }, 100);
     } catch (error) {
       console.error('Error handling urgent item bought:', error);
     }
@@ -92,10 +82,10 @@ const Index = () => {
           }} />
         </div>
         <div className="text-center">
-          <h1 className="text-4xl font-bold flex items-center justify-center gap-2 mb-2">
+          <h1 className="text-5xl font-bold flex items-center justify-center gap-2 mb-2">
             🏠 Flatmate Flow
           </h1>
-          <p className="text-slate-300 text-lg">Keep track of chores, shopping, and responsibilities</p>
+          <p className="text-slate-300 text-xl">Keep track of chores, shopping, and responsibilities</p>
         </div>
       </header>
 
