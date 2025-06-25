@@ -50,7 +50,12 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   const handleFlagLow = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
     await updateShoppingItem(itemId, { 
-      purchased_by: currentUserName // We'll use this field to track who flagged it as low
+      purchased_by: currentUserName // Use this field to track who flagged it as low
+    });
+    
+    toast({
+      title: "Item flagged as low stock",
+      description: "This item has been added to urgent items needed.",
     });
   };
 
