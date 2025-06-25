@@ -241,6 +241,50 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          household_id: string
+          id: string
+          is_purchased: boolean | null
+          name: string
+          purchased_by: string | null
+          quantity: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          household_id: string
+          id?: string
+          is_purchased?: boolean | null
+          name: string
+          purchased_by?: string | null
+          quantity?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          household_id?: string
+          id?: string
+          is_purchased?: boolean | null
+          name?: string
+          purchased_by?: string | null
+          quantity?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       household_member_details: {

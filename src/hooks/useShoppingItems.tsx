@@ -2,10 +2,28 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Database } from '@/integrations/supabase/types';
 
-type ShoppingItem = Database['public']['Tables']['shopping_items']['Row'];
-type ShoppingItemInsert = Database['public']['Tables']['shopping_items']['Insert'];
+// Define the shopping item types based on the database schema
+type ShoppingItem = {
+  id: string;
+  household_id: string;
+  name: string;
+  category: string | null;
+  quantity: number | null;
+  is_purchased: boolean | null;
+  purchased_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ShoppingItemInsert = {
+  household_id: string;
+  name: string;
+  category?: string | null;
+  quantity?: number | null;
+  is_purchased?: boolean | null;
+  purchased_by?: string | null;
+};
 
 export const useShoppingItems = (householdId: string | null) => {
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
