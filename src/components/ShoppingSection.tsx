@@ -1,4 +1,3 @@
-
 import { ShoppingCart, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
@@ -26,19 +24,10 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   } = useShoppingItems(selectedHouseholdId);
   const { toast } = useToast();
 
+  // Temporarily disabled until shopping_logs table is created
   const logShoppingAction = async (action: string, itemName: string, memberName: string) => {
-    if (!selectedHouseholdId) return;
-    
-    try {
-      await supabase.from('shopping_logs').insert({
-        household_id: selectedHouseholdId,
-        action,
-        item_name: itemName,
-        member_name: memberName
-      });
-    } catch (error) {
-      console.error('Error logging shopping action:', error);
-    }
+    // TODO: Re-enable after creating shopping_logs table
+    console.log(`Shopping action: ${action} - ${itemName} by ${memberName}`);
   };
 
   const addExampleItems = async () => {
