@@ -46,41 +46,40 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     return members[memberIndex].full_name || members[memberIndex].email;
   };
 
-  const getNextMember = (currentItemIndex: number) => {
-    if (members.length === 0) return null;
-    const nextIndex = (currentItemIndex + 1) % members.length;
-    return members[nextIndex].full_name || members[nextIndex].email;
-  };
-
   const handleMarkPurchased = async (itemId: string) => {
-    const itemIndex = shoppingItems.findIndex(i => i.id === itemId);
-    const item = shoppingItems[itemIndex];
+    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    const item = shoppingItems.find(i => i.id === itemId);
     if (!item) return;
 
-    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
-    const assignedMember = getAssignedMember(itemIndex);
+    // Find the current item's position in the sorted list to determine next assignee
+    const sortedItems = [...shoppingItems].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
     
-    // Add to history by creating a temporary record (this will be handled by the history system)
-    console.log(`${item.name} purchased by ${currentUserName}`);
+    const currentItemIndex = sortedItems.findIndex(sortedItem => sortedItem.id === itemId);
+    const nextMemberIndex = (currentItemIndex + 1) % members.length;
+    const nextMember = members[nextMemberIndex];
+    const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
     
-    // Reset item to default state and rotate to next member
-    const nextMember = getNextMember(itemIndex);
+    // Log to history (console for now)
+    console.log(`Shopping item purchased - ${item.name} bought by ${currentUserName} at ${new Date().toISOString()}`);
     
+    // Reset item to default state for next person
     await updateShoppingItem(itemId, { 
-      is_purchased: false,  // Reset to default state
-      purchased_by: null    // Clear any flags
+      is_purchased: false,
+      purchased_by: null
     });
     
     toast({
       title: "Item purchased! ✅",
-      description: `${item.name} bought by ${currentUserName}. Now assigned to ${nextMember || 'next person'}.`,
+      description: `${item.name} bought by ${currentUserName}. Now assigned to ${nextMemberName}.`,
     });
   };
 
   const handleFlagLow = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
     await updateShoppingItem(itemId, { 
-      purchased_by: currentUserName // Use this field to track who flagged it as low
+      purchased_by: currentUserName
     });
     
     toast({
@@ -92,16 +91,15 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
-  // Sort items: flagged first, then regular items
+  // Sort items: flagged first, then regular items by creation date
   const sortedItems = [...shoppingItems].sort((a, b) => {
-    // Flagged items (has purchased_by but not purchased) first
     const aFlagged = !a.is_purchased && a.purchased_by;
     const bFlagged = !b.is_purchased && b.purchased_by;
     
     if (aFlagged && !bFlagged) return -1;
     if (!aFlagged && bFlagged) return 1;
     
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
 
   const getDisabledTitle = () => {
@@ -154,16 +152,24 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedItems.map((item, index) => (
-              <ShoppingItemCard
-                key={item.id}
-                item={item}
-                assignedMember={getAssignedMember(sortedItems.findIndex(sortedItem => sortedItem.id === item.id))}
-                onMarkPurchased={handleMarkPurchased}
-                onFlagLow={handleFlagLow}
-                onDelete={deleteShoppingItem}
-              />
-            ))}
+            {sortedItems.map((item) => {
+              // Find the original index for assignment calculation (based on creation order)
+              const originalItems = [...shoppingItems].sort((a, b) => 
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
+              const originalIndex = originalItems.findIndex(origItem => origItem.id === item.id);
+              
+              return (
+                <ShoppingItemCard
+                  key={item.id}
+                  item={item}
+                  assignedMember={getAssignedMember(originalIndex)}
+                  onMarkPurchased={handleMarkPurchased}
+                  onFlagLow={handleFlagLow}
+                  onDelete={deleteShoppingItem}
+                />
+              );
+            })}
           </div>
         )}
       </CardContent>
