@@ -15,18 +15,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
-
-interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  paidBy: string;
-  splitType: 'equal' | 'individual';
-  owedBy: string[];
-  bankDetails: string;
-  date: Date;
-  household_id: string;
-}
+import { useExpenses } from "@/hooks/useExpenses";
 
 interface ExpenseFormValues {
   description: string;
@@ -34,6 +23,7 @@ interface ExpenseFormValues {
   paidBy: string;
   splitType: 'equal' | 'individual';
   owedBy: string[];
+  individualAmounts: Record<string, string>;
   bankDetails: string;
 }
 
@@ -44,7 +34,8 @@ interface ExpensesSectionProps {
 export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) => {
   const { toast } = useToast();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses(selectedHouseholdId);
+  const [pendingPayments, setPendingPayments] = useState<Record<string, string[]>>({});
 
   const expenseForm = useForm<ExpenseFormValues>({
     defaultValues: {
@@ -53,103 +44,133 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       paidBy: "",
       splitType: "equal",
       owedBy: [],
+      individualAmounts: {},
       bankDetails: ""
     }
   });
 
   const watchSplitType = expenseForm.watch("splitType");
   const watchOwedBy = expenseForm.watch("owedBy");
+  const watchAmount = expenseForm.watch("amount");
+  const watchIndividualAmounts = expenseForm.watch("individualAmounts");
 
-  const addExampleExpenses = () => {
+  const addExampleExpenses = async () => {
     if (!selectedHouseholdId || members.length === 0) return;
 
-    const exampleExpenses: Expense[] = [
+    const exampleExpenses = [
       {
-        id: "1",
+        household_id: selectedHouseholdId,
         description: "Groceries",
         amount: 45.50,
-        paidBy: members[0]?.full_name || members[0]?.email || "Member 1",
-        splitType: "equal",
-        owedBy: members.map(m => m.full_name || m.email),
-        bankDetails: `${members[0]?.full_name || "Member 1"} Bank - 1234567890`,
-        date: new Date(),
-        household_id: selectedHouseholdId
+        paid_by: members[0]?.full_name || members[0]?.email || "Member 1",
+        split_type: "equal" as const,
+        owed_by: members.map(m => m.full_name || m.email),
+        bank_details: `${members[0]?.full_name || "Member 1"} Bank - 1234567890`,
       },
       {
-        id: "2",
+        household_id: selectedHouseholdId,
         description: "Internet Bill",
         amount: 60.00,
-        paidBy: members[1]?.full_name || members[1]?.email || "Member 2",
-        splitType: "equal",
-        owedBy: members.map(m => m.full_name || m.email),
-        bankDetails: `${members[1]?.full_name || "Member 2"} Bank - 0987654321`,
-        date: new Date(),
-        household_id: selectedHouseholdId
+        paid_by: members[1]?.full_name || members[1]?.email || "Member 2",
+        split_type: "equal" as const,
+        owed_by: members.map(m => m.full_name || m.email),
+        bank_details: `${members[1]?.full_name || "Member 2"} Bank - 0987654321`,
       }
     ];
 
-    setExpenses(exampleExpenses);
+    for (const expense of exampleExpenses) {
+      await addExpense(expense);
+    }
+
     toast({
       title: "Example expenses added! 💰",
       description: "Sample expenses have been added to get you started.",
     });
   };
 
-  const addNewExpense = (values: ExpenseFormValues) => {
+  const addNewExpense = async (values: ExpenseFormValues) => {
     if (!selectedHouseholdId) return;
 
-    const owedByList = values.splitType === 'equal' 
-      ? members.map(m => m.full_name || m.email)
-      : values.owedBy;
+    let owedByList: string[] = [];
+    
+    if (values.splitType === 'equal') {
+      owedByList = members.map(m => m.full_name || m.email);
+    } else {
+      // For individual split, store the amounts with member names
+      owedByList = values.owedBy.map(member => {
+        const amount = values.individualAmounts[member] || "0";
+        return `${member}:${amount}`;
+      });
+    }
 
-    const newExpense: Expense = {
-      id: `${Date.now()}`,
+    const expenseData = {
+      household_id: selectedHouseholdId,
       description: values.description,
       amount: parseFloat(values.amount),
-      paidBy: values.paidBy,
-      splitType: values.splitType,
-      owedBy: owedByList,
-      bankDetails: values.bankDetails,
-      date: new Date(),
-      household_id: selectedHouseholdId
+      paid_by: values.paidBy,
+      split_type: values.splitType,
+      owed_by: owedByList,
+      bank_details: values.bankDetails,
     };
 
-    setExpenses(prev => [...prev, newExpense]);
-
-    toast({
-      title: "Expense added! 💰",
-      description: `${values.description} has been added to expenses.`,
-    });
-
-    expenseForm.reset();
+    const result = await addExpense(expenseData);
+    if (result) {
+      expenseForm.reset();
+    }
   };
 
-  const deleteExpense = (expenseId: string) => {
-    setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
-    toast({
-      title: "Expense deleted",
-      description: "The expense has been removed from the list.",
-    });
-  };
-
-  const calculateDebts = (expense: Expense) => {
-    const payer = expense.paidBy;
-    const owedMembers = expense.owedBy.filter(member => member !== payer);
+  const handleMarkAsPaid = (expenseId: string, memberName: string) => {
+    setPendingPayments(prev => ({
+      ...prev,
+      [expenseId]: [...(prev[expenseId] || []), memberName]
+    }));
     
-    if (expense.splitType === 'equal') {
-      const amountPerPerson = expense.amount / expense.owedBy.length;
-      return owedMembers.map(member => ({
+    toast({
+      title: "Payment claimed! 💳",
+      description: `${memberName} says they have paid. Waiting for confirmation.`,
+    });
+  };
+
+  const handleConfirmPayment = (expenseId: string, memberName: string) => {
+    setPendingPayments(prev => ({
+      ...prev,
+      [expenseId]: (prev[expenseId] || []).filter(name => name !== memberName)
+    }));
+    
+    toast({
+      title: "Payment confirmed! ✅",
+      description: `Payment from ${memberName} has been confirmed.`,
+    });
+  };
+
+  const calculateDebts = (expense: any) => {
+    const payer = expense.paid_by;
+    
+    if (expense.split_type === 'equal') {
+      const owedMembers = expense.owed_by.filter((member: string) => member !== payer);
+      const amountPerPerson = expense.amount / expense.owed_by.length;
+      return owedMembers.map((member: string) => ({
         name: member,
         amount: amountPerPerson
       }));
     } else {
-      // For individual split, divide equally among those who owe
-      const amountPerPerson = expense.amount / owedMembers.length;
-      return owedMembers.map(member => ({
-        name: member,
-        amount: amountPerPerson
-      }));
+      // For individual split, parse the stored amounts
+      return expense.owed_by
+        .filter((entry: string) => !entry.startsWith(payer + ":"))
+        .map((entry: string) => {
+          const [name, amount] = entry.split(":");
+          return {
+            name,
+            amount: parseFloat(amount || "0")
+          };
+        });
     }
+  };
+
+  const getTotalIndividualAmount = () => {
+    return Object.values(watchIndividualAmounts).reduce((sum, amount) => {
+      return sum + (parseFloat(amount as string) || 0);
+    }, 0);
   };
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
@@ -266,7 +287,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                           >
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="equal" id="equal" />
-                              <Label htmlFor="equal" className="text-gray-300">Split with all members</Label>
+                              <Label htmlFor="equal" className="text-gray-300">Split equally with all members</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="individual" id="individual" />
@@ -279,51 +300,114 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                   />
 
                   {watchSplitType === 'individual' && (
-                    <FormField
-                      control={expenseForm.control}
-                      name="owedBy"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-200">Person Owing Money</FormLabel>
-                          <FormControl>
-                            <div className="space-y-2">
-                              {members.map(member => (
-                                <div key={member.user_id} className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={member.user_id}
-                                    checked={field.value.includes(member.full_name || member.email)}
-                                    onCheckedChange={(checked) => {
-                                      const memberName = member.full_name || member.email;
-                                      if (checked) {
-                                        field.onChange([...field.value, memberName]);
-                                      } else {
-                                        field.onChange(field.value.filter(name => name !== memberName));
-                                      }
-                                    }}
-                                  />
-                                  <Label htmlFor={member.user_id} className="text-gray-300">
-                                    {member.full_name || member.email}
-                                  </Label>
-                                </div>
-                              ))}
-                            </div>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                    <>
+                      <FormField
+                        control={expenseForm.control}
+                        name="owedBy"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-200">People Owing Money</FormLabel>
+                            <FormControl>
+                              <div className="space-y-2">
+                                {members.map(member => (
+                                  <div key={member.user_id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={member.user_id}
+                                      checked={field.value.includes(member.full_name || member.email)}
+                                      onCheckedChange={(checked) => {
+                                        const memberName = member.full_name || member.email;
+                                        if (checked) {
+                                          field.onChange([...field.value, memberName]);
+                                        } else {
+                                          field.onChange(field.value.filter(name => name !== memberName));
+                                          // Clear the individual amount when unchecked
+                                          const currentAmounts = expenseForm.getValues("individualAmounts");
+                                          delete currentAmounts[memberName];
+                                          expenseForm.setValue("individualAmounts", currentAmounts);
+                                        }
+                                      }}
+                                    />
+                                    <Label htmlFor={member.user_id} className="text-gray-300">
+                                      {member.full_name || member.email}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
 
-                  {watchSplitType === 'individual' && watchOwedBy.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-gray-200">Split Preview:</Label>
-                      <div className="bg-gray-700 p-3 rounded-md space-y-1">
-                        {watchOwedBy.map(person => (
-                          <div key={person} className="text-sm text-gray-300">
-                            {person} owes £{expenseForm.watch("amount") ? (parseFloat(expenseForm.watch("amount")) / watchOwedBy.length).toFixed(2) : "0.00"}
+                      {watchOwedBy.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-gray-200">Individual Amounts</Label>
+                            {watchOwedBy.map(person => (
+                              <FormField
+                                key={person}
+                                control={expenseForm.control}
+                                name={`individualAmounts.${person}`}
+                                render={({ field }) => (
+                                  <div className="flex items-center space-x-2">
+                                    <Label className="text-gray-300 w-24 text-sm">{person}:</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="0.00"
+                                      {...field}
+                                      className="bg-gray-700 border-gray-600 text-gray-100 flex-1"
+                                    />
+                                    <span className="text-gray-400 text-sm">£</span>
+                                  </div>
+                                )}
+                              />
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const equalAmount = (parseFloat(watchAmount) / watchOwedBy.length).toFixed(2);
+                                  const amounts: Record<string, string> = {};
+                                  watchOwedBy.forEach(person => {
+                                    amounts[person] = equalAmount;
+                                  });
+                                  expenseForm.setValue("individualAmounts", amounts);
+                                }}
+                                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                              >
+                                Split Equally
+                              </Button>
+                            </div>
+                            
+                            <div className="bg-gray-700 p-3 rounded-md">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-300">Total assigned:</span>
+                                <span className="text-gray-300">£{getTotalIndividualAmount().toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-300">Expense total:</span>
+                                <span className="text-gray-300">£{parseFloat(watchAmount || "0").toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm font-medium">
+                                <span className="text-gray-300">Remaining:</span>
+                                <span className={`${
+                                  (parseFloat(watchAmount || "0") - getTotalIndividualAmount()) === 0 
+                                    ? "text-green-400" 
+                                    : "text-orange-400"
+                                }`}>
+                                  £{(parseFloat(watchAmount || "0") - getTotalIndividualAmount()).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <FormField
@@ -416,23 +500,51 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">Paid by:</span>
-                    <span className="text-gray-300">{expense.paidBy}</span>
+                    <span className="text-gray-300">{expense.paid_by}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">Split:</span>
                     <Badge variant="outline" className="text-gray-300">
-                      {expense.splitType === 'equal' ? 'All members' : 'Individual'}
+                      {expense.split_type === 'equal' ? 'All members' : 'Individual'}
                     </Badge>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {calculateDebts(expense).map(debt => (
-                      <div key={debt.name} className="text-sm text-orange-400">
-                        {debt.name} owes £{debt.amount.toFixed(2)}
+                      <div key={debt.name} className="flex items-center justify-between text-sm">
+                        <span className="text-orange-400">
+                          {debt.name} owes £{debt.amount.toFixed(2)}
+                        </span>
+                        <div className="flex gap-2">
+                          {pendingPayments[expense.id]?.includes(debt.name) ? (
+                            <div className="flex gap-2">
+                              <span className="text-yellow-400 text-xs">
+                                {debt.name} says paid
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleConfirmPayment(expense.id, debt.name)}
+                                className="h-6 px-2 text-xs border-green-600 text-green-400 hover:bg-green-700"
+                              >
+                                Confirm Payment
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkAsPaid(expense.id, debt.name)}
+                              className="h-6 px-2 text-xs border-blue-600 text-blue-400 hover:bg-blue-700"
+                            >
+                              Paid
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
                   <div className="text-xs text-gray-500 mt-2">
-                    <span className="text-gray-400">Bank:</span> {expense.bankDetails}
+                    <span className="text-gray-400">Bank:</span> {expense.bank_details}
                   </div>
                 </div>
               </div>

@@ -55,7 +55,13 @@ export const useExpenses = (householdId: string | null) => {
         return;
       }
 
-      setExpenses(data || []);
+      // Type assertion to ensure split_type is properly typed
+      const typedExpenses = (data || []).map(expense => ({
+        ...expense,
+        split_type: expense.split_type as 'equal' | 'individual'
+      }));
+
+      setExpenses(typedExpenses);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       toast({
@@ -86,13 +92,19 @@ export const useExpenses = (householdId: string | null) => {
         return null;
       }
 
-      setExpenses(prev => [data, ...prev]);
+      // Type assertion for the returned data
+      const typedExpense = {
+        ...data,
+        split_type: data.split_type as 'equal' | 'individual'
+      };
+
+      setExpenses(prev => [typedExpense, ...prev]);
       toast({
         title: "Expense added! 💰",
         description: `${expenseData.description} has been added to expenses.`,
       });
       
-      return data;
+      return typedExpense;
     } catch (error) {
       console.error('Error adding expense:', error);
       toast({
