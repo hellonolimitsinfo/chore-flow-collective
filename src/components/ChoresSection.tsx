@@ -90,30 +90,20 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
           ) : (
             chores.map((chore) => (
               <div key={chore.id} className="p-4 bg-slate-700 rounded-lg">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-white text-lg mb-2">{chore.name}</h4>
-                    <div className="flex items-center space-x-3">
-                      <Badge variant="outline" className="text-slate-300 border-slate-500 bg-slate-600">
-                        {chore.frequency}
-                      </Badge>
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 rounded-full ${getAssigneeColor(chore.assignee_name || '')}`}></div>
-                        <span className="text-sm text-slate-300">
-                          {chore.assignee_name}'s turn
-                        </span>
-                      </div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${getAssigneeColor(chore.assignee_name || '')}`}></div>
+                    <div>
+                      <h4 className="font-medium text-white text-lg">{chore.name}</h4>
+                      <span className="text-sm text-slate-300">
+                        {chore.assignee_name}'s turn
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button 
-                      size="sm" 
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => handleCompleteChore(chore.id)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Done
-                    </Button>
+                    <Badge variant="outline" className="text-slate-300 border-slate-500 bg-slate-600">
+                      {chore.frequency}
+                    </Badge>
                     <ContextMenu>
                       <ContextMenuTrigger asChild>
                         <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-600">
@@ -130,6 +120,16 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
                       </ContextMenuContent>
                     </ContextMenu>
                   </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button 
+                    size="sm" 
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => handleCompleteChore(chore.id)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Done
+                  </Button>
                 </div>
               </div>
             ))
