@@ -33,7 +33,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
 
     setLoading(true);
     try {
-      // Fetch completed chores
+      // Fetch completed chores with user names
       const { data: choreCompletions, error: choreError } = await supabase
         .from('chore_completions')
         .select(`
@@ -41,7 +41,8 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
           completed_by,
           completed_at,
           chore_id,
-          chores!inner(name, household_id)
+          chores!inner(name, household_id),
+          profiles!chore_completions_completed_by_fkey(full_name, email)
         `)
         .eq('chores.household_id', selectedHouseholdId)
         .order('completed_at', { ascending: false })
@@ -66,7 +67,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
         id: completion.id,
         type: 'chore' as const,
         name: completion.chores.name,
-        completed_by: completion.completed_by,
+        completed_by: completion.profiles?.full_name || completion.profiles?.email || 'Unknown',
         completed_at: completion.completed_at,
       }));
 

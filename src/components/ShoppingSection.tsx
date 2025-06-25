@@ -52,11 +52,10 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     });
   };
 
-  // Handle urgent items "Bought" button - this should just remove the flag, not mark as purchased
+  // Handle urgent items "Bought" button - this should mark as purchased and move to bottom
   const handleUrgentItemBought = async (itemId: string) => {
-    await updateShoppingItem(itemId, { 
-      purchased_by: null // Remove the flag, item goes back to normal state
-    });
+    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    await markAsPurchased(itemId, currentUserName);
   };
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
