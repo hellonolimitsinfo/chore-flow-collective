@@ -1,5 +1,4 @@
 
-import { Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -23,8 +22,7 @@ export const UrgentItemsSection = ({ flaggedItems, onMarkPurchased }: UrgentItem
     <Card className="bg-amber-900/30 border-amber-700 mb-4">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-amber-100 text-lg">
-          <Flag className="h-5 w-5" />
-          Urgent Items Needed
+          ⚠️ Urgent Items Needed
         </CardTitle>
       </CardHeader>
       <CardContent>

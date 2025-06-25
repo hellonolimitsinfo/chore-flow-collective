@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -11,6 +12,10 @@ import { ChoresSection } from "@/components/ChoresSection";
 import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
+import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
+import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
+import { useShoppingItems } from "@/hooks/useShoppingItems";
+import { useAuth as useAuthContext } from "@/hooks/useAuth";
 import { useState } from "react";
 
 const Index = () => {
@@ -18,6 +23,10 @@ const Index = () => {
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
+  
+  // Get shopping items for urgent items section
+  const { shoppingItems, updateShoppingItem } = useShoppingItems(selectedHouseholdId);
+  const { toast } = useAuth();
   
   // Handle invitation processing
   useInvitationHandler();
@@ -33,6 +42,32 @@ const Index = () => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
+
+  // Get flagged items (items that have purchased_by set but are not purchased)
+  const flaggedItems = shoppingItems.filter(item => !item.is_purchased && item.purchased_by);
+
+  const handleUrgentItemBought = async (itemId: string) => {
+    const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
+    
+    try {
+      // First, log this as a purchase in history by temporarily marking as purchased
+      await updateShoppingItem(itemId, { 
+        is_purchased: true,
+        purchased_by: currentUserName
+      });
+
+      // Then immediately revert to normal state (unflagged, unpurchased)
+      setTimeout(async () => {
+        await updateShoppingItem(itemId, { 
+          is_purchased: false,
+          purchased_by: null
+        });
+      }, 100);
+
+    } catch (error) {
+      console.error('Error handling urgent item bought:', error);
+    }
+  };
 
   const handleCreateHousehold = async (name: string, description?: string) => {
     return await createHousehold(name, description);
@@ -101,6 +136,14 @@ const Index = () => {
               No households yet. Create one to get started!
             </div>
           )}
+        </section>
+
+        {/* Urgent Items Section - Separate Row */}
+        <section className="mb-8">
+          <UrgentItemsSection 
+            flaggedItems={flaggedItems}
+            onMarkPurchased={handleUrgentItemBought}
+          />
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
