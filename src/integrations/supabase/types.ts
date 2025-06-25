@@ -267,6 +267,10 @@ export type Database = {
         Args: { target_household: string }
         Returns: boolean
       }
+      remove_household_member: {
+        Args: { p_household_id: string; p_user_id_to_remove: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

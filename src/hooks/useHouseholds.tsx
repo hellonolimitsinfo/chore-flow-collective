@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchHouseholdsFromDB, createHouseholdInDB, deleteHouseholdFromDB } from '@/services/householdService';
+import { fetchHouseholdsFromDB, createHouseholdInDB, deleteHouseholdFromDB, renameHouseholdInDB, removeMemberFromHousehold } from '@/services/householdService';
 import type { Household } from '@/types/household';
 
 export const useHouseholds = () => {
@@ -45,6 +44,48 @@ export const useHouseholds = () => {
     }
   };
 
+  const renameHousehold = async (householdId: string, newName: string) => {
+    if (!user) {
+      console.error('No user found, cannot rename household');
+      return false;
+    }
+
+    try {
+      const success = await renameHouseholdInDB(householdId, newName);
+      if (success) {
+        setHouseholds(prevHouseholds => 
+          prevHouseholds.map(h => 
+            h.id === householdId ? { ...h, name: newName } : h
+          )
+        );
+        
+        await fetchHouseholds();
+      }
+      return success;
+    } catch (error) {
+      console.error('Error renaming household:', error);
+      return false;
+    }
+  };
+
+  const removeMember = async (householdId: string, userId: string) => {
+    if (!user) {
+      console.error('No user found, cannot remove member');
+      return false;
+    }
+
+    try {
+      const success = await removeMemberFromHousehold(householdId, userId);
+      if (success) {
+        await fetchHouseholds();
+      }
+      return success;
+    } catch (error) {
+      console.error('Error removing member:', error);
+      return false;
+    }
+  };
+
   const deleteHousehold = async (householdId: string) => {
     if (!user) {
       console.error('No user found, cannot delete household');
@@ -54,12 +95,10 @@ export const useHouseholds = () => {
     try {
       const success = await deleteHouseholdFromDB(user.id, householdId);
       if (success) {
-        // Remove the household from local state immediately for better UX
         setHouseholds(prevHouseholds => 
           prevHouseholds.filter(h => h.id !== householdId)
         );
         
-        // Also refresh from server to ensure consistency
         await fetchHouseholds();
       }
       return success;
@@ -77,6 +116,8 @@ export const useHouseholds = () => {
     households,
     loading,
     createHousehold,
+    renameHousehold,
+    removeMember,
     deleteHousehold,
     refetch: fetchHouseholds
   };

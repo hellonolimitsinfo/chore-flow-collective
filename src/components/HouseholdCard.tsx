@@ -1,20 +1,33 @@
 
-import { Users, Settings, Trash2, UserPlus } from "lucide-react";
+import { Users, Settings, Trash2, UserPlus, Edit3, UserMinus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { Household } from "@/types/household";
 import { InviteMemberModal } from "@/components/households/InviteMemberModal";
+import { HouseholdMembersModal } from "@/components/households/HouseholdMembersModal";
+import { RenameHouseholdModal } from "@/components/households/RenameHouseholdModal";
 
 interface HouseholdCardProps {
   household: Household;
   isSelected: boolean;
   onSelect: () => void;
   onDelete?: (householdId: string) => void;
+  onRename?: (householdId: string, newName: string) => Promise<boolean>;
+  onRemoveMember?: (householdId: string, userId: string) => Promise<boolean>;
 }
 
-export const HouseholdCard = ({ household, isSelected, onSelect, onDelete }: HouseholdCardProps) => {
+export const HouseholdCard = ({ 
+  household, 
+  isSelected, 
+  onSelect, 
+  onDelete, 
+  onRename,
+  onRemoveMember 
+}: HouseholdCardProps) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -28,8 +41,20 @@ export const HouseholdCard = ({ household, isSelected, onSelect, onDelete }: Hou
     setShowInviteModal(true);
   };
 
+  const handleViewMembers = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMembersModal(true);
+  };
+
+  const handleRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowRenameModal(true);
+  };
+
   const canDelete = household.user_role === 'admin';
   const canInvite = household.user_role === 'admin';
+  const canRename = household.user_role === 'admin';
+  const canManageMembers = household.user_role === 'admin';
 
   return (
     <>
@@ -59,6 +84,28 @@ export const HouseholdCard = ({ household, isSelected, onSelect, onDelete }: Hou
                   title="Add Members"
                 >
                   <UserPlus className="w-4 h-4" />
+                </Button>
+              )}
+              {canManageMembers && (
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleViewMembers}
+                  className="text-blue-400 hover:text-blue-300"
+                  title="Manage Members"
+                >
+                  <UserMinus className="w-4 h-4" />
+                </Button>
+              )}
+              {canRename && (
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={handleRename}
+                  className="text-orange-400 hover:text-orange-300"
+                  title="Rename Household"
+                >
+                  <Edit3 className="w-4 h-4" />
                 </Button>
               )}
               <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white">
@@ -104,6 +151,27 @@ export const HouseholdCard = ({ household, isSelected, onSelect, onDelete }: Hou
         householdId={household.id}
         householdName={household.name}
       />
+
+      {onRemoveMember && (
+        <HouseholdMembersModal
+          isOpen={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+          householdId={household.id}
+          householdName={household.name}
+          userRole={household.user_role || 'member'}
+          onRemoveMember={(userId) => onRemoveMember(household.id, userId)}
+        />
+      )}
+
+      {onRename && (
+        <RenameHouseholdModal
+          isOpen={showRenameModal}
+          onClose={() => setShowRenameModal(false)}
+          householdId={household.id}
+          currentName={household.name}
+          onRename={onRename}
+        />
+      )}
     </>
   );
 };

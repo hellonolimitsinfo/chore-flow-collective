@@ -16,7 +16,7 @@ import { useState } from "react";
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { households, loading: householdsLoading, createHousehold, deleteHousehold } = useHouseholds();
+  const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   
@@ -37,6 +37,14 @@ const Index = () => {
 
   const handleCreateHousehold = async (name: string, description?: string) => {
     return await createHousehold(name, description);
+  };
+
+  const handleRenameHousehold = async (householdId: string, newName: string) => {
+    return await renameHousehold(householdId, newName);
+  };
+
+  const handleRemoveMember = async (householdId: string, userId: string) => {
+    return await removeMember(householdId, userId);
   };
 
   const handleDeleteHousehold = async (householdId: string) => {
@@ -84,6 +92,8 @@ const Index = () => {
                   isSelected={selectedHouseholdId === household.id}
                   onSelect={() => setSelectedHouseholdId(household.id)}
                   onDelete={handleDeleteHousehold}
+                  onRename={handleRenameHousehold}
+                  onRemoveMember={handleRemoveMember}
                 />
               ))}
             </div>

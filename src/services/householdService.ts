@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Household, HouseholdMember } from '@/types/household';
@@ -94,6 +93,44 @@ export const createHouseholdInDB = async (userId: string, name: string, descript
   console.log('Created household:', householdData);
   toast.success('Household created successfully!');
   return householdData;
+};
+
+export const renameHouseholdInDB = async (householdId: string, newName: string): Promise<boolean> => {
+  console.log('Renaming household:', householdId, 'to:', newName);
+  
+  const { error } = await supabase
+    .from('households')
+    .update({ name: newName, updated_at: new Date().toISOString() })
+    .eq('id', householdId);
+
+  if (error) {
+    console.error('Error renaming household:', error);
+    toast.error('Failed to rename household: ' + error.message);
+    return false;
+  }
+
+  console.log('Successfully renamed household:', householdId);
+  toast.success('Household renamed successfully!');
+  return true;
+};
+
+export const removeMemberFromHousehold = async (householdId: string, userId: string): Promise<boolean> => {
+  console.log('Removing member from household:', householdId, 'user:', userId);
+  
+  const { data, error } = await supabase.rpc('remove_household_member', {
+    p_household_id: householdId,
+    p_user_id_to_remove: userId
+  });
+
+  if (error) {
+    console.error('Error removing household member:', error);
+    toast.error('Failed to remove member: ' + error.message);
+    return false;
+  }
+
+  console.log('Successfully removed household member:', userId);
+  toast.success('Member removed successfully!');
+  return true;
 };
 
 export const deleteHouseholdFromDB = async (userId: string, householdId: string): Promise<boolean> => {
