@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -15,16 +14,12 @@ import { UrgentItems } from "@/components/UrgentItems";
 import { useState } from "react";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 
-// Use the database ShoppingItem type from the hook
-interface DatabaseShoppingItem {
+interface ShoppingItem {
   id: string;
-  household_id: string;
   name: string;
-  is_low: boolean;
-  flagged_by?: string;
-  assigned_to: string;
-  created_at: string;
-  updated_at: string;
+  isLow: boolean;
+  flaggedBy?: string;
+  assignedTo: number;
 }
 
 const Index = () => {
@@ -32,7 +27,7 @@ const Index = () => {
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
-  const [urgentShoppingItems, setUrgentShoppingItems] = useState<DatabaseShoppingItem[]>([]);
+  const [urgentShoppingItems, setUrgentShoppingItems] = useState<ShoppingItem[]>([]);
   const { members } = useHouseholdMembers(selectedHouseholdId);
   
   // Handle invitation processing
@@ -66,7 +61,7 @@ const Index = () => {
     return await deleteHousehold(householdId);
   };
 
-  const handleShoppingItemsChange = (items: DatabaseShoppingItem[]) => {
+  const handleShoppingItemsChange = (items: ShoppingItem[]) => {
     // Filter items that are flagged as low for the urgent items section
     const lowStockItems = items.filter(item => item.is_low);
     setUrgentShoppingItems(lowStockItems);
