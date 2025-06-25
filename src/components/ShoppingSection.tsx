@@ -216,9 +216,11 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemsChange }: Shopping
             <Button 
               onClick={addExampleItems}
               variant="outline" 
-              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 flex items-center justify-center gap-2"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <div className="flex items-center justify-center w-5 h-5 text-gray-400">
+                ⚙️
+              </div>
               Add Examples
             </Button>
           </div>

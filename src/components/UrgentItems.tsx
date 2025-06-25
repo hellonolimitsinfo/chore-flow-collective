@@ -1,4 +1,3 @@
-
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +43,10 @@ export const UrgentItems = ({ shoppingItems, members, onShoppingComplete }: Urge
     return colors[index];
   };
 
+  const handleBoughtClick = (itemId: string) => {
+    onShoppingComplete(itemId);
+  };
+
   return (
     <Card className="bg-gradient-to-r from-orange-900/30 to-red-900/30 border-orange-600/50">
       <CardHeader>
@@ -71,7 +74,7 @@ export const UrgentItems = ({ shoppingItems, members, onShoppingComplete }: Urge
               </div>
               <Button 
                 size="sm" 
-                onClick={() => onShoppingComplete(item.id)}
+                onClick={() => handleBoughtClick(item.id)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 Bought
