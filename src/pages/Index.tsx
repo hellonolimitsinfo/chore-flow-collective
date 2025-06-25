@@ -15,7 +15,7 @@ import { HistorySection } from "@/components/HistorySection";
 import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
-import { useAuth as useAuthContext } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const Index = () => {
@@ -26,7 +26,7 @@ const Index = () => {
   
   // Get shopping items for urgent items section
   const { shoppingItems, updateShoppingItem } = useShoppingItems(selectedHouseholdId);
-  const { toast } = useAuth();
+  const { toast } = useToast();
   
   // Handle invitation processing
   useInvitationHandler();
