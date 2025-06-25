@@ -1,4 +1,3 @@
-
 import { ShoppingCart, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
 import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
@@ -24,6 +25,7 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     markAsPurchased,
     updateShoppingItem 
   } = useShoppingItems(selectedHouseholdId);
+  const { toast } = useToast();
 
   const addExampleItems = async () => {
     if (!selectedHouseholdId) return;
@@ -52,10 +54,37 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     });
   };
 
-  // Handle urgent items "Bought" button - this should mark as purchased and move to bottom
+  // Handle urgent items "Bought" button - clear flag and log to history
   const handleUrgentItemBought = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
-    await markAsPurchased(itemId, currentUserName);
+    
+    try {
+      // First, log this as a purchase in history by temporarily marking as purchased
+      await updateShoppingItem(itemId, { 
+        is_purchased: true,
+        purchased_by: currentUserName
+      });
+
+      // Then immediately revert to normal state (unflagged, unpurchased)
+      setTimeout(async () => {
+        await updateShoppingItem(itemId, { 
+          is_purchased: false,
+          purchased_by: null
+        });
+      }, 100);
+
+      toast({
+        title: "Item purchased! ✅",
+        description: "Thanks for getting the supplies!",
+      });
+    } catch (error) {
+      console.error('Error handling urgent item bought:', error);
+      toast({
+        title: "Error",
+        description: "Could not update item status.",
+        variant: "destructive",
+      });
+    }
   };
 
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
