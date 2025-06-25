@@ -13,7 +13,7 @@ interface ShoppingItemFormValues {
 interface AddShoppingItemSheetProps {
   isDisabled: boolean;
   disabledTitle: string;
-  onAddItem: (name: string) => Promise<void>;
+  onAddItem: (name: string) => Promise<any>;
 }
 
 export const AddShoppingItemSheet = ({ isDisabled, disabledTitle, onAddItem }: AddShoppingItemSheetProps) => {
