@@ -132,7 +132,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      household_member_details: {
+        Row: {
+          household_id: string | null
+          household_name: string | null
+          id: string | null
+          joined_at: string | null
+          role: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_members_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       is_household_member: {
