@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,18 +22,18 @@ export const useHouseholdMembers = (householdId: string | null) => {
         .select(`
           user_id,
           role,
-          profiles(full_name, email)
+          profiles:profiles!household_members_user_id_fkey(full_name, email)
         `)
         .eq('household_id', householdId);
 
       if (error) throw error;
 
-      const membersWithProfiles = data?.map(member => ({
+      const membersWithProfiles: HouseholdMember[] = (data as any[]).map((member: any) => ({
         user_id: member.user_id,
         role: member.role || 'member',
         full_name: member.profiles?.full_name || null,
         email: member.profiles?.email || ''
-      })) || [];
+      }));
 
       setMembers(membersWithProfiles);
     } catch (error) {
