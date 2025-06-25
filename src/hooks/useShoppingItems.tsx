@@ -58,14 +58,13 @@ export const useShoppingItems = (householdId: string | null) => {
     }
   };
 
-  const addShoppingItem = async (name: string, category: string = 'other') => {
+  const addShoppingItem = async (name: string) => {
     if (!householdId) return null;
 
     try {
       const newItem: ShoppingItemInsert = {
         household_id: householdId,
         name,
-        category,
         quantity: 1,
         is_purchased: false,
       };
