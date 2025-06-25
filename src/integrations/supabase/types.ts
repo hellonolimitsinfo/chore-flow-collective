@@ -243,6 +243,7 @@ export type Database = {
       }
       shopping_items: {
         Row: {
+          assigned_member_index: number | null
           category: string | null
           created_at: string
           household_id: string
@@ -254,6 +255,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_member_index?: number | null
           category?: string | null
           created_at?: string
           household_id: string
@@ -265,6 +267,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_member_index?: number | null
           category?: string | null
           created_at?: string
           household_id?: string
