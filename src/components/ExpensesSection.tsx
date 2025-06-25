@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useExpenses } from "@/hooks/useExpenses";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ExpenseFormValues {
@@ -34,6 +35,7 @@ interface ExpensesSectionProps {
 
 export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
   const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses(selectedHouseholdId);
   const [pendingPayments, setPendingPayments] = useState<Record<string, string[]>>({});
@@ -185,6 +187,11 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           };
         });
     }
+  };
+
+  const getCurrentUserName = () => {
+    const currentMember = members.find(m => m.user_id === user?.id);
+    return currentMember?.full_name || currentMember?.email || '';
   };
 
   const getTotalIndividualAmount = () => {
@@ -493,120 +500,133 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           </div>
         ) : (
           <div className="space-y-4">
-            {expenses.map((expense) => (
-              <div key={expense.id} className="p-4 border rounded-lg border-gray-700 bg-gray-800/50 hover:bg-gray-700/50 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-gray-200">{expense.description}</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-green-400">£{expense.amount.toFixed(2)}</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-                        <DropdownMenuItem 
-                          onClick={() => deleteExpense(expense.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            {expenses.map((expense) => {
+              const currentUserName = getCurrentUserName();
+              
+              return (
+                <div key={expense.id} className="p-4 border rounded-lg border-gray-700 bg-gray-800/50 hover:bg-gray-700/50 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-gray-200">{expense.description}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-green-400">£{expense.amount.toFixed(2)}</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                          <DropdownMenuItem 
+                            onClick={() => deleteExpense(expense.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Paid by:</span>
-                    <span className="text-gray-300">{expense.paid_by}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Split:</span>
-                    <Badge variant="outline" className="text-gray-300">
-                      {expense.split_type === 'equal' ? 'All members' : 'Individual'}
-                    </Badge>
-                  </div>
+                  
                   <div className="space-y-2">
-                    {calculateDebts(expense).map(debt => (
-                      <div key={debt.name} className="flex items-center justify-between text-sm">
-                        <span className="text-orange-400">
-                          {debt.name} owes £{debt.amount.toFixed(2)}
-                        </span>
-                        {pendingPayments[expense.id]?.includes(debt.name) ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-yellow-400 text-xs">
-                              Says paid
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Paid by:</span>
+                      <span className="text-gray-300">{expense.paid_by}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Split:</span>
+                      <Badge variant="outline" className="text-gray-300">
+                        {expense.split_type === 'equal' ? 'All members' : 'Individual'}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {calculateDebts(expense).map(debt => {
+                        const isCurrentUserOwing = debt.name === currentUserName;
+                        const showPaidButton = !isCurrentUserOwing; // Only show if it's NOT the current user
+                        
+                        return (
+                          <div key={debt.name} className="flex items-center justify-between text-sm">
+                            <span className="text-orange-400">
+                              {debt.name} owes £{debt.amount.toFixed(2)}
                             </span>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 px-2 text-xs border-green-600 text-green-400 hover:bg-green-700"
-                                >
-                                  Confirm
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-gray-800 border-gray-700">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-gray-100">Confirm Payment</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-gray-400">
-                                    Are you sure you want to confirm that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => handleConfirmPayment(expense.id, debt.name, expense.description)}
-                                    className="bg-green-700 hover:bg-green-800"
-                                  >
-                                    Confirm
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {showPaidButton && (
+                              <>
+                                {pendingPayments[expense.id]?.includes(debt.name) ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-yellow-400 text-xs">
+                                      Says paid
+                                    </span>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-6 px-2 text-xs border-green-600 text-green-400 hover:bg-green-700"
+                                        >
+                                          Confirm
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="bg-gray-800 border-gray-700">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="text-gray-100">Confirm Payment</AlertDialogTitle>
+                                          <AlertDialogDescription className="text-gray-400">
+                                            Are you sure you want to confirm that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
+                                          <AlertDialogAction 
+                                            onClick={() => handleConfirmPayment(expense.id, debt.name, expense.description)}
+                                            className="bg-green-700 hover:bg-green-800"
+                                          >
+                                            Confirm
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                ) : (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-6 px-2 text-xs border-blue-600 text-blue-400 hover:bg-blue-700"
+                                      >
+                                        Paid
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="bg-gray-800 border-gray-700">
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="text-gray-100">Mark as Paid</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-gray-400">
+                                          Are you sure you want to mark that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => handleMarkAsPaid(expense.id, debt.name, expense.description)}
+                                          className="bg-blue-700 hover:bg-blue-800"
+                                        >
+                                          Mark as Paid
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </>
+                            )}
                           </div>
-                        ) : (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 px-2 text-xs border-blue-600 text-blue-400 hover:bg-blue-700"
-                              >
-                                Paid
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-gray-800 border-gray-700">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-gray-100">Mark as Paid</AlertDialogTitle>
-                                <AlertDialogDescription className="text-gray-400">
-                                  Are you sure you want to mark that {debt.name} has paid £{debt.amount.toFixed(2)} for {expense.description}?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleMarkAsPaid(expense.id, debt.name, expense.description)}
-                                  className="bg-blue-700 hover:bg-blue-800"
-                                >
-                                  Mark as Paid
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    <span className="text-gray-400">Bank:</span> {expense.bank_details}
+                        );
+                      })}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      <span className="text-gray-400">Bank:</span> {expense.bank_details}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
