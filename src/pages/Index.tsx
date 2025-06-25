@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -13,14 +14,9 @@ import { ExpensesSection } from "@/components/ExpensesSection";
 import { UrgentItems } from "@/components/UrgentItems";
 import { useState } from "react";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
+import { Database } from "@/integrations/supabase/types";
 
-interface ShoppingItem {
-  id: string;
-  name: string;
-  isLow: boolean;
-  flaggedBy?: string;
-  assignedTo: number;
-}
+type ShoppingItem = Database["public"]["Tables"]["shopping_items"]["Row"];
 
 const Index = () => {
   const { user, loading } = useAuth();

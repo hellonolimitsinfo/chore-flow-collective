@@ -3,17 +3,9 @@ import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
+import { Database } from "@/integrations/supabase/types";
 
-interface ShoppingItem {
-  id: string;
-  household_id: string;
-  name: string;
-  is_low: boolean;
-  flagged_by?: string;
-  assigned_to: string;
-  created_at: string;
-  updated_at: string;
-}
+type ShoppingItem = Database["public"]["Tables"]["shopping_items"]["Row"];
 
 interface HouseholdMember {
   user_id: string;
