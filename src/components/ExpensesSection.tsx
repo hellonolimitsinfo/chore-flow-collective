@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DollarSign, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,11 +33,20 @@ interface ExpensesSectionProps {
   selectedHouseholdId: string | null;
 }
 
+interface PaymentStatus {
+  [key: string]: {
+    status: 'settled' | 'pending' | 'unpaid';
+    showPaidButton: boolean;
+    showConfirmButton: boolean;
+  };
+}
+
 export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
   const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses(selectedHouseholdId);
+  const [paymentStatuses, setPaymentStatuses] = useState<Record<string, PaymentStatus>>({});
 
   const expenseForm = useForm<ExpenseFormValues>({
     defaultValues: {
@@ -58,6 +67,43 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const watchDescription = expenseForm.watch("description");
   const watchPaidBy = expenseForm.watch("paidBy");
   const watchBankDetails = expenseForm.watch("bankDetails");
+
+  // Load payment statuses for all expenses
+  useEffect(() => {
+    const loadPaymentStatuses = async () => {
+      if (!expenses.length) return;
+
+      const statusPromises = expenses.map(async (expense) => {
+        const debts = calculateDebts(expense);
+        const debtStatuses: PaymentStatus = {};
+
+        for (const debt of debts) {
+          const status = await getDebtStatus(expense, debt.name);
+          const showPaidButton = await shouldShowPaidButton(expense, debt.name);
+          const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
+
+          debtStatuses[debt.name] = {
+            status,
+            showPaidButton,
+            showConfirmButton
+          };
+        }
+
+        return { expenseId: expense.id, statuses: debtStatuses };
+      });
+
+      const results = await Promise.all(statusPromises);
+      const newStatuses: Record<string, PaymentStatus> = {};
+
+      results.forEach(({ expenseId, statuses }) => {
+        newStatuses[expenseId] = statuses;
+      });
+
+      setPaymentStatuses(newStatuses);
+    };
+
+    loadPaymentStatuses();
+  }, [expenses, user]);
 
   // Check if all required fields are filled
   const isFormValid = () => {
@@ -202,8 +248,29 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       description: `${memberName} says they have paid. Waiting for confirmation.`,
     });
     
-    // Force refresh to show updated state
-    window.location.reload();
+    // Refresh payment statuses
+    const expense = expenses.find(e => e.id === expenseId);
+    if (expense) {
+      const debts = calculateDebts(expense);
+      const debtStatuses: PaymentStatus = {};
+
+      for (const debt of debts) {
+        const status = await getDebtStatus(expense, debt.name);
+        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
+        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
+
+        debtStatuses[debt.name] = {
+          status,
+          showPaidButton,
+          showConfirmButton
+        };
+      }
+
+      setPaymentStatuses(prev => ({
+        ...prev,
+        [expenseId]: debtStatuses
+      }));
+    }
   };
 
   const handleConfirmPayment = async (expenseId: string, memberName: string, expenseDescription: string) => {
@@ -234,8 +301,28 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       description: `Payment from ${memberName} has been confirmed.`,
     });
     
-    // Force refresh to show updated state
-    window.location.reload();
+    // Refresh payment statuses
+    if (expense) {
+      const debts = calculateDebts(expense);
+      const debtStatuses: PaymentStatus = {};
+
+      for (const debt of debts) {
+        const status = await getDebtStatus(expense, debt.name);
+        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
+        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
+
+        debtStatuses[debt.name] = {
+          status,
+          showPaidButton,
+          showConfirmButton
+        };
+      }
+
+      setPaymentStatuses(prev => ({
+        ...prev,
+        [expenseId]: debtStatuses
+      }));
+    }
   };
 
   const calculateDebts = (expense: any) => {
@@ -624,6 +711,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           <div className="space-y-4">
             {expenses.map((expense) => {
               const currentUserName = getCurrentUserName();
+              const expensePaymentStatus = paymentStatuses[expense.id] || {};
               
               return (
                 <div key={expense.id} className="p-4 border rounded-lg border-gray-700 bg-gray-800/50 hover:bg-gray-700/50 transition-colors">
@@ -655,22 +743,20 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                     </div>
                     <div className="space-y-2">
                       {calculateDebts(expense).map(debt => {
-                        const debtStatus = getDebtStatus(expense, debt.name);
-                        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
-                        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
+                        const debtStatus = expensePaymentStatus[debt.name];
                         
                         return (
                           <div key={debt.name} className="flex items-center justify-between text-sm">
                             <span className={`${
-                              debtStatus === 'settled' 
+                              debtStatus?.status === 'settled' 
                                 ? 'text-green-400 line-through' 
                                 : 'text-orange-400'
                             }`}>
                               {debt.name} owes £{debt.amount.toFixed(2)}
-                              {debtStatus === 'pending' && <span className="text-yellow-400 ml-2">(Says paid)</span>}
+                              {debtStatus?.status === 'pending' && <span className="text-yellow-400 ml-2">(Says paid)</span>}
                             </span>
                             <div className="flex items-center gap-2">
-                              {showPaidButton && (
+                              {debtStatus?.showPaidButton && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -701,7 +787,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                                 </AlertDialog>
                               )}
                               
-                              {showConfirmButton && (
+                              {debtStatus?.showConfirmButton && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -732,7 +818,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                                 </AlertDialog>
                               )}
                               
-                              {debtStatus === 'pending' && !showPaidButton && !showConfirmButton && (
+                              {debtStatus?.status === 'pending' && !debtStatus?.showPaidButton && !debtStatus?.showConfirmButton && (
                                 <span className="text-yellow-400 text-xs">
                                   Awaiting confirmation
                                 </span>
