@@ -7,16 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-interface Member {
-  id: string;
-  user_id: string;
-  household_id: string;
-  email: string;
-  full_name?: string;
-  role: string;
-  created_at: string;
-}
+import { HouseholdMember } from "@/hooks/useHouseholdMembers";
 
 interface CreateExpenseData {
   household_id: string;
@@ -33,7 +24,7 @@ interface AddExpenseFormProps {
   onClose: () => void;
   onSubmit: (data: CreateExpenseData) => Promise<any>;
   householdId: string;
-  members: Member[];
+  members: HouseholdMember[];
 }
 
 export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members }: AddExpenseFormProps) => {
