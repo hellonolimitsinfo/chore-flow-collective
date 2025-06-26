@@ -19,13 +19,13 @@ interface InviteMemberModalProps {
 export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName }: InviteMemberModalProps) => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
   const [copied, setCopied] = useState(false);
   const { user } = useAuth();
 
-  const generateInviteLink = (email: string) => {
+  const generateInviteLink = (token: string) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/?invite_email=${encodeURIComponent(email)}&household_id=${householdId}`;
+    return `${baseUrl}/join?token=${token}`;
   };
 
   const copyToClipboard = async (text: string) => {
@@ -62,22 +62,36 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       const inviterName = profile?.full_name || user.email?.split('@')[0] || 'Someone';
 
+      // Create invitation record in database
+      const { data: invitationData, error: invitationError } = await supabase
+        .from('household_invitations')
+        .insert([{
+          household_id: householdId,
+          email: email.trim(),
+          invited_by: user.id
+        }])
+        .select('token')
+        .single();
+
+      if (invitationError) throw invitationError;
+
+      // Set the token for generating the invite link
+      setInviteToken(invitationData.token);
+
+      // Send invitation email
       const { data, error } = await supabase.functions.invoke('send-invitation', {
         body: {
           householdId,
           householdName,
           inviteEmail: email.trim(),
-          inviterName
+          inviterName,
+          inviteToken: invitationData.token
         }
       });
 
       if (error) {
         throw error;
       }
-
-      // Generate the invite link
-      const link = generateInviteLink(email.trim());
-      setInviteLink(link);
 
       toast.success(`Invitation sent to ${email}!`);
     } catch (error: any) {
@@ -90,7 +104,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
   const handleClose = () => {
     setEmail("");
-    setInviteLink("");
+    setInviteToken("");
     setCopied(false);
     onClose();
   };
@@ -122,20 +136,20 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
             />
           </div>
 
-          {inviteLink && (
+          {inviteToken && (
             <div className="space-y-2">
               <Label htmlFor="invite-link">Invite Link</Label>
               <div className="flex gap-2">
                 <Input
                   id="invite-link"
-                  value={inviteLink}
+                  value={generateInviteLink(inviteToken)}
                   readOnly
                   className="bg-gray-100 text-sm"
                 />
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => copyToClipboard(inviteLink)}
+                  onClick={() => copyToClipboard(generateInviteLink(inviteToken))}
                   className="px-3"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
