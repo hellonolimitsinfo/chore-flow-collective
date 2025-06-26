@@ -64,11 +64,8 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const watchOwedBy = expenseForm.watch("owedBy");
   const watchAmount = expenseForm.watch("amount");
   const watchIndividualAmounts = expenseForm.watch("individualAmounts");
-  const watchDescription = expenseForm.watch("description");
-  const watchPaidBy = expenseForm.watch("paidBy");
-  const watchBankDetails = expenseForm.watch("bankDetails");
 
-  // Load payment statuses for all expenses
+  // Load payment statuses for all expenses with real-time updates
   const loadPaymentStatuses = async () => {
     if (!expenses.length) return;
 
@@ -105,9 +102,37 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     loadPaymentStatuses();
   }, [expenses, user]);
 
+  // Set up real-time listener for payment logs to update buttons instantly
+  useEffect(() => {
+    if (!selectedHouseholdId) return;
+
+    const channel = supabase
+      .channel(`payment_logs_${selectedHouseholdId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payment_logs',
+          filter: `household_id=eq.${selectedHouseholdId}`
+        },
+        () => {
+          // Refresh payment statuses when payment logs change
+          setTimeout(() => {
+            loadPaymentStatuses();
+          }, 100);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedHouseholdId, expenses]);
+
   // Check if all required fields are filled
   const isFormValid = () => {
-    const basicFieldsFilled = watchDescription && watchAmount && watchPaidBy && watchBankDetails;
+    const basicFieldsFilled = expenseForm.watch("description") && expenseForm.watch("amount") && expenseForm.watch("paidBy") && expenseForm.watch("bankDetails");
     
     if (watchSplitType === 'individual') {
       const hasSelectedMembers = watchOwedBy.length > 0;
@@ -154,6 +179,12 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       title: "Example expenses added! 💰",
       description: "Sample expenses have been added to get you started.",
     });
+
+    // Refresh expenses and payment statuses
+    await refetchExpenses();
+    setTimeout(() => {
+      loadPaymentStatuses();
+    }, 200);
   };
 
   const addNewExpense = async (values: ExpenseFormValues) => {
@@ -164,7 +195,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     if (values.splitType === 'equal') {
       owedByList = members.map(m => m.full_name || m.email);
     } else {
-      // For individual split, store the amounts with member names
       owedByList = values.owedBy.map(member => {
         const amount = values.individualAmounts[member] || "0";
         return `${member}:${amount}`;
@@ -184,10 +214,10 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     const result = await addExpense(expenseData);
     if (result) {
       expenseForm.reset();
-      // Refresh payment statuses immediately after adding expense
+      await refetchExpenses();
       setTimeout(() => {
         loadPaymentStatuses();
-      }, 100);
+      }, 200);
     }
   };
 
@@ -226,7 +256,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
             pendingPayments.push(log.member_name);
           }
         } else if (log.action === 'confirmed') {
-          // Remove from pending and add to settled
           const pendingIndex = pendingPayments.indexOf(log.member_name);
           if (pendingIndex > -1) {
             pendingPayments.splice(pendingIndex, 1);
@@ -253,7 +282,9 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     });
     
     // Refresh payment statuses immediately
-    loadPaymentStatuses();
+    setTimeout(() => {
+      loadPaymentStatuses();
+    }, 100);
   };
 
   const handleConfirmPayment = async (expenseId: string, memberName: string, expenseDescription: string) => {
@@ -267,16 +298,18 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       const updatedSettled = [...settledDebts, memberName];
       
       if (allDebts.length === updatedSettled.length) {
-        // All debts settled, log completion but DON'T delete expense yet
+        // All debts settled - log completion and hide from expenses view
         await logPaymentAction(expenseId, 'System', 'completed', `All debts settled for ${expenseDescription}`);
         
-        // Delete the expense from the expenses table (but keep all history in payment_logs)
-        await deleteExpense(expenseId);
-        
+        // Instead of deleting, we'll filter it out in the UI
+        // The expense remains in Supabase for history
         toast({
           title: "Expense completed! ✅",
-          description: `All debts for "${expenseDescription}" have been settled.`,
+          description: `All debts for "${expenseDescription}" have been settled and moved to history.`,
         });
+        
+        // Refresh expenses to trigger re-render
+        await refetchExpenses();
         return;
       }
     }
@@ -287,7 +320,9 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     });
     
     // Refresh payment statuses immediately
-    loadPaymentStatuses();
+    setTimeout(() => {
+      loadPaymentStatuses();
+    }, 100);
   };
 
   const calculateDebts = (expense: any) => {
@@ -301,7 +336,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         amount: amountPerPerson
       }));
     } else {
-      // For individual split, parse the stored amounts
       return expense.owed_by
         .filter((entry: string) => !entry.startsWith(payer + ":"))
         .map((entry: string) => {
@@ -319,7 +353,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     return currentMember?.full_name || currentMember?.email || '';
   };
 
-  // Updated payment status functions that use database data
   const shouldShowPaidButton = async (expense: any, debtorName: string) => {
     const currentUserName = getCurrentUserName();
     const isDebtor = currentUserName === debtorName;
@@ -362,8 +395,45 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }, 0);
   };
 
+  // Filter out completed expenses from the main view
+  const getVisibleExpenses = async () => {
+    const visibleExpenses = [];
+    
+    for (const expense of expenses) {
+      const allDebts = calculateDebts(expense);
+      if (allDebts.length === 0) {
+        visibleExpenses.push(expense);
+        continue;
+      }
+      
+      const { settledDebts } = await getPaymentStatus(expense.id);
+      
+      // Only show if not all debts are settled
+      if (settledDebts.length < allDebts.length) {
+        visibleExpenses.push(expense);
+      }
+    }
+    
+    return visibleExpenses;
+  };
+
+  const [visibleExpenses, setVisibleExpenses] = useState<any[]>([]);
+
+  useEffect(() => {
+    const updateVisibleExpenses = async () => {
+      const visible = await getVisibleExpenses();
+      setVisibleExpenses(visible);
+    };
+    
+    if (expenses.length > 0) {
+      updateVisibleExpenses();
+    } else {
+      setVisibleExpenses([]);
+    }
+  }, [expenses, paymentStatuses]);
+
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
-  const shouldShowExamplesButton = expenses.length === 0 && selectedHouseholdId && members.length > 0;
+  const shouldShowExamplesButton = visibleExpenses.length === 0 && selectedHouseholdId && members.length > 0;
 
   const getDisabledTitle = () => {
     if (!selectedHouseholdId) return "Select a household first";
@@ -509,7 +579,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                                           field.onChange([...field.value, memberName]);
                                         } else {
                                           field.onChange(field.value.filter(name => name !== memberName));
-                                          // Clear the individual amount when unchecked
                                           const currentAmounts = expenseForm.getValues("individualAmounts");
                                           delete currentAmounts[memberName];
                                           expenseForm.setValue("individualAmounts", currentAmounts);
@@ -646,6 +715,20 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         </Sheet>
       </CardHeader>
       <CardContent>
+        {/* Add Examples button on separate row */}
+        {shouldShowExamplesButton && (
+          <div className="mb-4">
+            <Button 
+              onClick={addExampleExpenses}
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Add Example Expenses
+            </Button>
+          </div>
+        )}
+
         {!selectedHouseholdId ? (
           <div className="text-gray-400 text-center py-4">
             Select a household to view expenses
@@ -654,13 +737,13 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           <div className="text-gray-400 text-center py-4">
             No household members found
           </div>
-        ) : expenses.length === 0 ? (
+        ) : visibleExpenses.length === 0 ? (
           <div className="text-gray-400 text-center py-4">
             No expenses yet. Add some to get started!
           </div>
         ) : (
           <div className="space-y-4">
-            {expenses.map((expense) => {
+            {visibleExpenses.map((expense) => {
               const currentUserName = getCurrentUserName();
               const expensePaymentStatus = paymentStatuses[expense.id] || {};
               

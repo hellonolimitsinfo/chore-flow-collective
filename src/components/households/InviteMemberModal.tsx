@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Mail, X } from "lucide-react";
+import { Mail, X, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,25 @@ interface InviteMemberModalProps {
 export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName }: InviteMemberModalProps) => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [copied, setCopied] = useState(false);
   const { user } = useAuth();
+
+  const generateInviteLink = (email: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/?invite_email=${encodeURIComponent(email)}&household_id=${householdId}`;
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Invite link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast.error("Failed to copy link");
+    }
+  };
 
   const handleSendInvitation = async () => {
     if (!email.trim()) {
@@ -57,9 +75,11 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
         throw error;
       }
 
+      // Generate the invite link
+      const link = generateInviteLink(email.trim());
+      setInviteLink(link);
+
       toast.success(`Invitation sent to ${email}!`);
-      setEmail("");
-      onClose();
     } catch (error: any) {
       console.error('Error sending invitation:', error);
       toast.error(error.message || "Failed to send invitation");
@@ -70,6 +90,8 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
   const handleClose = () => {
     setEmail("");
+    setInviteLink("");
+    setCopied(false);
     onClose();
   };
 
@@ -99,6 +121,31 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
               }}
             />
           </div>
+
+          {inviteLink && (
+            <div className="space-y-2">
+              <Label htmlFor="invite-link">Invite Link</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="invite-link"
+                  value={inviteLink}
+                  readOnly
+                  className="bg-gray-100 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => copyToClipboard(inviteLink)}
+                  className="px-3"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-600">
+                Share this link with {email} as an alternative to email invitation.
+              </p>
+            </div>
+          )}
           
           <div className="flex gap-3 justify-end">
             <Button variant="outline" onClick={handleClose} disabled={isLoading}>
