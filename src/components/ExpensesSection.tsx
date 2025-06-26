@@ -614,7 +614,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700">
-                            <MoreHorizontal className="h-4 w-4" />
+                            <Settings className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
@@ -729,8 +729,13 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                         );
                       })}
                     </div>
-                    <div className="text-xs text-gray-500 mt-2">
-                      <span className="text-gray-400">Bank Details:</span> {expense.bank_details}
+                    <div className="text-xs text-gray-500 mt-2 space-y-1">
+                      <div>
+                        <span className="text-gray-400">Bank Details:</span> {expense.bank_details}
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Date Created:</span> {new Date(expense.created_at).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                 </div>
