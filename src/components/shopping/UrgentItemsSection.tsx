@@ -7,17 +7,31 @@ interface UrgentItem {
   id: string;
   name: string;
   purchased_by: string | null;
+  assigned_member_index?: number | null;
 }
 
 interface UrgentItemsSectionProps {
   flaggedItems: UrgentItem[];
+  members: Array<{ full_name: string | null; email: string }>;
   onMarkPurchased: (itemId: string) => void;
 }
 
-export const UrgentItemsSection = ({ flaggedItems, onMarkPurchased }: UrgentItemsSectionProps) => {
+export const UrgentItemsSection = ({ flaggedItems, members, onMarkPurchased }: UrgentItemsSectionProps) => {
   if (flaggedItems.length === 0) {
     return null;
   }
+
+  const getAssignedMember = (item: UrgentItem) => {
+    if (members.length === 0) return 'Unknown';
+    
+    // If the item has an assigned_member_index, use that
+    if (typeof item.assigned_member_index === 'number' && item.assigned_member_index < members.length) {
+      return members[item.assigned_member_index].full_name || members[item.assigned_member_index].email;
+    }
+    
+    // Fallback to first member
+    return members[0].full_name || members[0].email;
+  };
 
   return (
     <Card className="bg-red-900/30 border-red-700 mb-4">
@@ -34,7 +48,10 @@ export const UrgentItemsSection = ({ flaggedItems, onMarkPurchased }: UrgentItem
                 <div>
                   <h4 className="font-medium text-red-100">{item.name}</h4>
                   <p className="text-sm text-red-300">
-                    🟣 {item.purchased_by}'s responsibility
+                    🟣 {getAssignedMember(item)}'s responsibility
+                  </p>
+                  <p className="text-xs text-red-400">
+                    Flagged by: {item.purchased_by}
                   </p>
                 </div>
                 <div className="flex gap-2">

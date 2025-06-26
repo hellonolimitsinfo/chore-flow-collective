@@ -1,5 +1,5 @@
 
-import { User, Settings, LogOut, Moon, Sun } from "lucide-react";
+import { User, Settings, LogOut, Moon, Sun, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,8 +7,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 interface UserMenuProps {
@@ -20,6 +24,7 @@ interface UserMenuProps {
 
 export const UserMenu = ({ user }: UserMenuProps) => {
   const { signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
 
   const handleSignOut = async () => {
     try {
@@ -49,17 +54,41 @@ export const UserMenu = ({ user }: UserMenuProps) => {
           <p className="text-muted-foreground">{user.email}</p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          onClick={toggleTheme}
-          className="cursor-pointer"
-        >
-          <Sun className="w-4 h-4 mr-2" />
-          Toggle Theme
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          <Settings className="w-4 h-4 mr-2" />
-          Settings
-        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem 
+              onClick={toggleTheme}
+              className="cursor-pointer"
+            >
+              <Sun className="w-4 h-4 mr-2" />
+              Toggle Theme
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Languages className="w-4 h-4 mr-2" />
+                Language
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem 
+                  onClick={() => setLanguage('en')}
+                  className={`cursor-pointer ${language === 'en' ? 'bg-accent' : ''}`}
+                >
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLanguage('zh')}
+                  className={`cursor-pointer ${language === 'zh' ? 'bg-accent' : ''}`}
+                >
+                  中文
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           onClick={handleSignOut}

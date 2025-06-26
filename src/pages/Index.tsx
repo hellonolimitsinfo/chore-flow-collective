@@ -1,10 +1,9 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Calendar, ShoppingCart, DollarSign } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { HouseholdCard } from "@/components/HouseholdCard";
 import { CreateHouseholdForm } from "@/components/households/CreateHouseholdForm";
@@ -13,7 +12,6 @@ import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
 import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
@@ -61,49 +59,36 @@ const Index = () => {
     return await deleteHousehold(householdId);
   };
 
-  const getNextMember = (currentMemberName: string) => {
-    if (members.length === 0) return null;
-    
-    // Find current member index
-    const currentIndex = members.findIndex(member => 
-      (member.full_name || member.email) === currentMemberName
-    );
-    
-    // Get next member (rotate to beginning if at end)
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % members.length;
-    const nextMember = members[nextIndex];
-    
-    return nextMember.full_name || nextMember.email;
-  };
-
   // Handle urgent items "Bought" button - mark as purchased and rotate to next person
   const handleUrgentItemBought = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
     const item = shoppingItems.find(i => i.id === itemId);
     
-    if (!item) return;
+    if (!item || !members.length) return;
     
     try {
-      const nextMember = getNextMember(item.purchased_by || '');
-      
-      // Mark as purchased
-      await updateShoppingItem(itemId, { 
-        is_purchased: true,
-        purchased_by: currentUserName
-      });
-      
-      // Add new item for next person if there are members
-      if (nextMember && selectedHouseholdId) {
-        const { addShoppingItem } = require('@/hooks/useShoppingItems');
-        // This is a workaround - ideally we'd have access to addShoppingItem here
-        // For now, we'll just reset the current item for the next person
-        setTimeout(async () => {
-          await updateShoppingItem(itemId, {
-            is_purchased: false,
-            purchased_by: nextMember
-          });
-        }, 1000);
+      // Get current assigned member index
+      let currentMemberIndex = 0;
+      if (typeof item.assigned_member_index === 'number') {
+        currentMemberIndex = item.assigned_member_index;
+      } else {
+        // Calculate based on creation order if not set
+        const sortedItems = [...shoppingItems].sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        const itemIndex = sortedItems.findIndex(sortedItem => sortedItem.id === itemId);
+        currentMemberIndex = itemIndex % members.length;
       }
+      
+      // Calculate next member index
+      const nextMemberIndex = (currentMemberIndex + 1) % members.length;
+      
+      // Reset item to default state and assign to next person
+      await updateShoppingItem(itemId, { 
+        is_purchased: false,
+        purchased_by: null,
+        assigned_member_index: nextMemberIndex
+      });
     } catch (error) {
       console.error('Error handling urgent item bought:', error);
     }
@@ -115,8 +100,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <LanguageToggle />
+        <div className="flex justify-end items-center mb-4">
           <UserMenu user={{ 
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
             email: user.email || ''
@@ -171,6 +155,7 @@ const Index = () => {
           <section className="mb-8">
             <UrgentItemsSection 
               flaggedItems={flaggedItems}
+              members={members}
               onMarkPurchased={handleUrgentItemBought}
             />
           </section>
