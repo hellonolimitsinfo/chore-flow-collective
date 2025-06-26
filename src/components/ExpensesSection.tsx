@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, MoreHorizontal, Trash2, CreditCard, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -198,7 +199,10 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       );
 
       if (allConfirmed) {
-        // All debts are settled, remove from expenses list but keep in history
+        // Store expense in history before deleting
+        await storeExpenseInHistory(expense);
+        
+        // All debts are settled, remove from expenses list
         await deleteExpense(expense.id);
         toast({
           title: "Expense fully settled! 🎉",
@@ -218,8 +222,40 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }
   };
 
+  const storeExpenseInHistory = async (expense: Expense) => {
+    try {
+      const { error } = await supabase
+        .from('expense_history')
+        .insert([{
+          household_id: expense.household_id,
+          original_expense_id: expense.id,
+          description: expense.description,
+          amount: expense.amount,
+          paid_by: expense.paid_by,
+          split_type: expense.split_type,
+          owed_by: expense.owed_by,
+          bank_details: expense.bank_details,
+          created_at: expense.created_at,
+          settled_at: new Date().toISOString()
+        }]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error storing expense in history:', error);
+    }
+  };
+
   const getPaymentState = (expenseId: string, memberName: string): PaymentState => {
     return paymentStates[expenseId]?.[memberName] || 'pending';
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const renderPaymentStatus = (expense: Expense, memberName: string) => {
@@ -228,6 +264,11 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                            members.find(m => m.user_id === user?.id)?.email || 
                            'Unknown';
     const isPayer = expense.paid_by === currentUserName;
+
+    // Don't show payment button for the person who originally paid
+    if (memberName === expense.paid_by) {
+      return <Badge variant="outline" className="ml-2 text-green-600">✅ Paid</Badge>;
+    }
 
     switch (state) {
       case 'pending':
@@ -262,7 +303,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
             </div>
           );
         }
-        return <Badge variant="outline" className="ml-2 text-yellow-600">Claimed</Badge>;
+        return <Badge variant="outline" className="ml-2 text-yellow-600">Awaiting Confirmation</Badge>;
       
       case 'confirmed':
         return (
@@ -280,10 +321,10 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     return (
       <Card className="bg-gray-800/80 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-gray-100">💰 {t('expenses')}</CardTitle>
+          <CardTitle className="text-gray-100">Expenses</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-400">{t('select_household')}</p>
+          <p className="text-gray-400">Select a household to view expenses</p>
         </CardContent>
       </Card>
     );
@@ -292,21 +333,22 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   return (
     <Card className="bg-gray-800/80 border-gray-700">
       <CardHeader className="pb-2">
-        <CardTitle className="text-gray-100 flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          💰 {t('expenses')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-gray-100 flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Expenses
+          </CardTitle>
           <Button
             onClick={() => setIsAddingExpense(true)}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {t('add_expense')}
+            Add Expense
           </Button>
-          
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {expenses.length === 0 && (
           <Button
             onClick={addExampleExpenses}
             variant="outline"
@@ -314,7 +356,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           >
             Add Examples
           </Button>
-        </div>
+        )}
 
         {loading ? (
           <div className="text-gray-400 text-center py-4">
@@ -337,8 +379,11 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                     <p className="text-sm text-gray-400 mb-2">
                       Paid by: {expense.paid_by}
                     </p>
-                    <div className="text-sm text-gray-400 mb-3">
+                    <div className="text-sm text-gray-400 mb-2">
                       Bank: {expense.bank_details}
+                    </div>
+                    <div className="text-sm text-gray-400 mb-3">
+                      Date Created: {formatDate(expense.created_at)}
                     </div>
                   </div>
                   
