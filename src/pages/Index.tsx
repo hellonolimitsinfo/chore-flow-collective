@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -16,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -28,7 +30,7 @@ const Index = () => {
   useInvitationHandler();
 
   // Get shopping items and members for urgent section
-  const { shoppingItems, updateShoppingItem } = useShoppingItems(selectedHouseholdId);
+  const { shoppingItems, updateShoppingItem, refreshItems } = useShoppingItems(selectedHouseholdId);
   const { members } = useHouseholdMembers(selectedHouseholdId);
 
   if (loading) {
@@ -59,6 +61,26 @@ const Index = () => {
     return await deleteHousehold(householdId);
   };
 
+  // Log shopping actions to the shopping_logs table
+  const logShoppingAction = async (action: string, itemName: string, memberName: string) => {
+    if (!selectedHouseholdId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('shopping_logs')
+        .insert({
+          household_id: selectedHouseholdId,
+          action,
+          item_name: itemName,
+          member_name: memberName
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error logging shopping action:', error);
+    }
+  };
+
   // Handle urgent items "Bought" button - mark as purchased and rotate to next person
   const handleUrgentItemBought = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
@@ -80,8 +102,15 @@ const Index = () => {
         currentMemberIndex = itemIndex % members.length;
       }
       
+      // Get current assigned member name for logging
+      const currentMember = members[currentMemberIndex];
+      const assignedMemberName = currentMember?.full_name || currentMember?.email || 'Unknown';
+      
       // Calculate next member index
       const nextMemberIndex = (currentMemberIndex + 1) % members.length;
+      
+      // Log the shopping action with the assigned member who was supposed to buy it
+      await logShoppingAction('purchased', item.name, assignedMemberName);
       
       // Reset item to default state and assign to next person
       await updateShoppingItem(itemId, { 
@@ -89,6 +118,9 @@ const Index = () => {
         purchased_by: null,
         assigned_member_index: nextMemberIndex
       });
+
+      // Refresh the shopping items to ensure both sections are updated
+      await refreshItems();
     } catch (error) {
       console.error('Error handling urgent item bought:', error);
     }
@@ -166,7 +198,7 @@ const Index = () => {
             <ChoresSection selectedHouseholdId={selectedHouseholdId} />
           </div>
           <div>
-            <ShoppingSection selectedHouseholdId={selectedHouseholdId} />
+            <ShoppingSection selectedHouseholdId={selectedHouseholdId} onItemUpdated={refreshItems} />
           </div>
           <div>
             <ExpensesSection selectedHouseholdId={selectedHouseholdId} />

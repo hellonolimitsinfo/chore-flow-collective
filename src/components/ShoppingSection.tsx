@@ -1,3 +1,4 @@
+
 import { ShoppingCart, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
+  onItemUpdated?: () => void;
 }
 
-export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) => {
+export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: ShoppingSectionProps) => {
   const { user } = useAuth();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
   const { 
@@ -95,13 +97,17 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
       currentMemberIndex = itemIndex % members.length;
     }
     
+    // Get current assigned member name for logging
+    const currentMember = members[currentMemberIndex];
+    const assignedMemberName = currentMember?.full_name || currentMember?.email || 'Unknown';
+    
     // Calculate next member index
     const nextMemberIndex = (currentMemberIndex + 1) % members.length;
     const nextMember = members[nextMemberIndex];
     const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
     
-    // Log the shopping action
-    await logShoppingAction('purchased', item.name, currentUserName);
+    // Log the shopping action with the assigned member who was supposed to buy it
+    await logShoppingAction('purchased', item.name, assignedMemberName);
     
     // Reset item to default state and assign to next person
     await updateShoppingItem(itemId, { 
@@ -110,9 +116,14 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
       assigned_member_index: nextMemberIndex
     });
     
+    // Notify parent component that item was updated
+    if (onItemUpdated) {
+      onItemUpdated();
+    }
+    
     toast({
       title: "Item purchased! ✅",
-      description: `${item.name} bought by ${currentUserName}. Now assigned to ${nextMemberName}.`,
+      description: `${item.name} bought by ${assignedMemberName}. Now assigned to ${nextMemberName}.`,
     });
   };
 
@@ -127,6 +138,11 @@ export const ShoppingSection = ({ selectedHouseholdId }: ShoppingSectionProps) =
     await updateShoppingItem(itemId, { 
       purchased_by: currentUserName
     });
+    
+    // Notify parent component that item was updated
+    if (onItemUpdated) {
+      onItemUpdated();
+    }
     
     toast({
       title: "Item flagged as low stock",
