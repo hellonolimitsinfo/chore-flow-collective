@@ -18,10 +18,12 @@ import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { user, loading } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
@@ -108,6 +110,8 @@ const Index = () => {
       
       // Calculate next member index
       const nextMemberIndex = (currentMemberIndex + 1) % members.length;
+      const nextMember = members[nextMemberIndex];
+      const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
       
       // Log the shopping action with the assigned member who was supposed to buy it
       await logShoppingAction('purchased', item.name, assignedMemberName);
@@ -120,9 +124,19 @@ const Index = () => {
       });
 
       // Refresh the shopping items to ensure both sections are updated
-      await refreshItems();
+      refreshItems();
+      
+      toast({
+        title: "Item purchased! ✅",
+        description: `${item.name} bought by ${assignedMemberName}. Now assigned to ${nextMemberName}.`,
+      });
     } catch (error) {
       console.error('Error handling urgent item bought:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update shopping item",
+        variant: "destructive",
+      });
     }
   };
 
