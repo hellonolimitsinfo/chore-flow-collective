@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Plus, MoreHorizontal, Settings } from "lucide-react";
+import { DollarSign, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,8 +38,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const { user } = useAuth();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
   const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses(selectedHouseholdId);
-  const [pendingPayments, setPendingPayments] = useState<Record<string, string[]>>({});
-  const [settledDebts, setSettledDebts] = useState<Record<string, string[]>>({});
 
   const expenseForm = useForm<ExpenseFormValues>({
     defaultValues: {
@@ -158,52 +156,70 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }
   };
 
+  // Get payment status from database
+  const getPaymentStatus = async (expenseId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_logs')
+        .select('member_name, action')
+        .eq('expense_id', expenseId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const pendingPayments: string[] = [];
+      const settledDebts: string[] = [];
+
+      data?.forEach(log => {
+        if (log.action === 'claimed' && !settledDebts.includes(log.member_name)) {
+          if (!pendingPayments.includes(log.member_name)) {
+            pendingPayments.push(log.member_name);
+          }
+        } else if (log.action === 'confirmed') {
+          // Remove from pending and add to settled
+          const pendingIndex = pendingPayments.indexOf(log.member_name);
+          if (pendingIndex > -1) {
+            pendingPayments.splice(pendingIndex, 1);
+          }
+          if (!settledDebts.includes(log.member_name)) {
+            settledDebts.push(log.member_name);
+          }
+        }
+      });
+
+      return { pendingPayments, settledDebts };
+    } catch (error) {
+      console.error('Error getting payment status:', error);
+      return { pendingPayments: [], settledDebts: [] };
+    }
+  };
+
   const handleMarkAsPaid = async (expenseId: string, memberName: string, expenseDescription: string) => {
-    setPendingPayments(prev => ({
-      ...prev,
-      [expenseId]: [...(prev[expenseId] || []), memberName]
-    }));
-    
     await logPaymentAction(expenseId, memberName, 'claimed', expenseDescription);
     
     toast({
       title: "Payment claimed! 💳",
       description: `${memberName} says they have paid. Waiting for confirmation.`,
     });
+    
+    // Force refresh to show updated state
+    window.location.reload();
   };
 
   const handleConfirmPayment = async (expenseId: string, memberName: string, expenseDescription: string) => {
-    // Remove from pending payments
-    setPendingPayments(prev => ({
-      ...prev,
-      [expenseId]: (prev[expenseId] || []).filter(name => name !== memberName)
-    }));
-    
-    // Add to settled debts
-    setSettledDebts(prev => ({
-      ...prev,
-      [expenseId]: [...(prev[expenseId] || []), memberName]
-    }));
-    
     await logPaymentAction(expenseId, memberName, 'confirmed', expenseDescription);
     
     // Check if all debts for this expense are settled
     const expense = expenses.find(e => e.id === expenseId);
     if (expense) {
       const allDebts = calculateDebts(expense);
-      const currentSettled = [...(settledDebts[expenseId] || []), memberName];
+      const { settledDebts } = await getPaymentStatus(expenseId);
+      const updatedSettled = [...settledDebts, memberName];
       
-      if (allDebts.length === currentSettled.length) {
+      if (allDebts.length === updatedSettled.length) {
         // All debts settled, log transaction and delete expense
         await logPaymentAction(expenseId, 'System', 'completed', `All debts settled for ${expenseDescription}`);
         await deleteExpense(expenseId);
-        
-        // Clean up state
-        setSettledDebts(prev => {
-          const newState = { ...prev };
-          delete newState[expenseId];
-          return newState;
-        });
         
         toast({
           title: "Expense completed! ✅",
@@ -217,6 +233,9 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       title: "Payment confirmed! ✅",
       description: `Payment from ${memberName} has been confirmed.`,
     });
+    
+    // Force refresh to show updated state
+    window.location.reload();
   };
 
   const calculateDebts = (expense: any) => {
@@ -248,29 +267,37 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     return currentMember?.full_name || currentMember?.email || '';
   };
 
-  const shouldShowPaidButton = (expense: any, debtorName: string) => {
+  // Updated payment status functions that use database data
+  const shouldShowPaidButton = async (expense: any, debtorName: string) => {
     const currentUserName = getCurrentUserName();
     const isDebtor = currentUserName === debtorName;
-    const isPending = pendingPayments[expense.id]?.includes(debtorName);
-    const isSettled = settledDebts[expense.id]?.includes(debtorName);
     
-    // Show button only if current user is the debtor and debt is not pending or settled
-    return isDebtor && !isPending && !isSettled;
+    if (!isDebtor) return false;
+    
+    const { pendingPayments, settledDebts } = await getPaymentStatus(expense.id);
+    const isPending = pendingPayments.includes(debtorName);
+    const isSettled = settledDebts.includes(debtorName);
+    
+    return !isPending && !isSettled;
   };
 
-  const shouldShowConfirmButton = (expense: any, debtorName: string) => {
+  const shouldShowConfirmButton = async (expense: any, debtorName: string) => {
     const currentUserName = getCurrentUserName();
     const isPayer = currentUserName === expense.paid_by;
-    const isPending = pendingPayments[expense.id]?.includes(debtorName);
-    const isSettled = settledDebts[expense.id]?.includes(debtorName);
     
-    // Show confirm button only if current user is the payer and debt is pending but not settled
-    return isPayer && isPending && !isSettled;
+    if (!isPayer) return false;
+    
+    const { pendingPayments, settledDebts } = await getPaymentStatus(expense.id);
+    const isPending = pendingPayments.includes(debtorName);
+    const isSettled = settledDebts.includes(debtorName);
+    
+    return isPending && !isSettled;
   };
 
-  const getDebtStatus = (expense: any, debtorName: string) => {
-    const isPending = pendingPayments[expense.id]?.includes(debtorName);
-    const isSettled = settledDebts[expense.id]?.includes(debtorName);
+  const getDebtStatus = async (expense: any, debtorName: string) => {
+    const { pendingPayments, settledDebts } = await getPaymentStatus(expense.id);
+    const isPending = pendingPayments.includes(debtorName);
+    const isSettled = settledDebts.includes(debtorName);
     
     if (isSettled) return 'settled';
     if (isPending) return 'pending';
@@ -567,24 +594,17 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
             </SheetContent>
           </Sheet>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-              {shouldShowExamplesButton && (
-                <DropdownMenuItem 
-                  onClick={addExampleExpenses}
-                  className="text-gray-300 hover:text-gray-100 hover:bg-gray-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Examples
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {shouldShowExamplesButton && (
+            <Button 
+              onClick={addExampleExpenses}
+              variant="outline"
+              size="sm"
+              className="h-8 border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Examples
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -611,21 +631,14 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                     <h3 className="font-medium text-gray-200">{expense.description}</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-green-400">£{expense.amount.toFixed(2)}</span>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700">
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-                          <DropdownMenuItem 
-                            onClick={() => deleteExpense(expense.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button 
+                        onClick={() => deleteExpense(expense.id)}
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-xs border-red-600 text-red-400 hover:bg-red-700"
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </div>
                   
@@ -643,8 +656,8 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                     <div className="space-y-2">
                       {calculateDebts(expense).map(debt => {
                         const debtStatus = getDebtStatus(expense, debt.name);
-                        const showPaidButton = shouldShowPaidButton(expense, debt.name);
-                        const showConfirmButton = shouldShowConfirmButton(expense, debt.name);
+                        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
+                        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
                         
                         return (
                           <div key={debt.name} className="flex items-center justify-between text-sm">

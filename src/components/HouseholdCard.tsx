@@ -1,6 +1,8 @@
+
 import { Users, Settings, Trash2, UserPlus, Edit3, UserMinus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import type { Household } from "@/types/household";
 import { InviteMemberModal } from "@/components/households/InviteMemberModal";
@@ -75,56 +77,60 @@ export const HouseholdCard = ({
                 <p className="text-sm text-slate-400 mt-1">{household.description}</p>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {canInvite && (
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button 
-                  size="default" 
+                  size="sm" 
                   variant="outline" 
-                  onClick={handleInviteMembers}
-                  className="text-green-400 hover:text-green-300 border-green-400 hover:border-green-300 px-3 py-2"
-                  title={t('add_members')}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-gray-400 hover:text-gray-200 border-gray-600 hover:border-gray-300 px-3 py-2"
+                  title="Settings"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add
+                  <Settings className="w-4 h-4" />
                 </Button>
-              )}
-              {canManageMembers && (
-                <Button 
-                  size="default" 
-                  variant="outline" 
-                  onClick={handleViewMembers}
-                  className="text-blue-400 hover:text-blue-300 border-blue-400 hover:border-blue-300 px-3 py-2"
-                  title={t('manage_members')}
-                >
-                  <UserMinus className="w-4 h-4 mr-2" />
-                  Manage
-                </Button>
-              )}
-              {canRename && (
-                <Button 
-                  size="default" 
-                  variant="outline" 
-                  onClick={handleRename}
-                  className="text-orange-400 hover:text-orange-300 border-orange-400 hover:border-orange-300 px-3 py-2"
-                  title={t('rename_household')}
-                >
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Rename
-                </Button>
-              )}
-              {canDelete && (
-                <Button 
-                  size="default" 
-                  variant="outline" 
-                  onClick={handleDelete}
-                  className="text-red-400 hover:text-red-300 border-red-400 hover:border-red-300 px-3 py-2"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              )}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                {canInvite && (
+                  <DropdownMenuItem 
+                    onClick={handleInviteMembers}
+                    className="text-green-400 hover:text-green-300 hover:bg-gray-700"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add Members
+                  </DropdownMenuItem>
+                )}
+                {canManageMembers && (
+                  <DropdownMenuItem 
+                    onClick={handleViewMembers}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-gray-700"
+                  >
+                    <UserMinus className="w-4 h-4 mr-2" />
+                    Manage Members
+                  </DropdownMenuItem>
+                )}
+                {canRename && (
+                  <DropdownMenuItem 
+                    onClick={handleRename}
+                    className="text-orange-400 hover:text-orange-300 hover:bg-gray-700"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Rename Household
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <DropdownMenuItem 
+                    onClick={handleDelete}
+                    className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Household
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+          
           <div className="flex items-center text-slate-400">
             <Users className="w-4 h-4 mr-2" />
             <div className="flex flex-col">
