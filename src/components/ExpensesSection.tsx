@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DollarSign, Plus } from "lucide-react";
+import { DollarSign, Plus, MoreVertical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const { toast } = useToast();
   const { user } = useAuth();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
-  const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses(selectedHouseholdId);
+  const { expenses, loading: expensesLoading, addExpense, deleteExpense, refetchExpenses } = useExpenses(selectedHouseholdId);
   const [paymentStatuses, setPaymentStatuses] = useState<Record<string, PaymentStatus>>({});
 
   const expenseForm = useForm<ExpenseFormValues>({
@@ -69,39 +69,39 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const watchBankDetails = expenseForm.watch("bankDetails");
 
   // Load payment statuses for all expenses
+  const loadPaymentStatuses = async () => {
+    if (!expenses.length) return;
+
+    const statusPromises = expenses.map(async (expense) => {
+      const debts = calculateDebts(expense);
+      const debtStatuses: PaymentStatus = {};
+
+      for (const debt of debts) {
+        const status = await getDebtStatus(expense, debt.name);
+        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
+        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
+
+        debtStatuses[debt.name] = {
+          status,
+          showPaidButton,
+          showConfirmButton
+        };
+      }
+
+      return { expenseId: expense.id, statuses: debtStatuses };
+    });
+
+    const results = await Promise.all(statusPromises);
+    const newStatuses: Record<string, PaymentStatus> = {};
+
+    results.forEach(({ expenseId, statuses }) => {
+      newStatuses[expenseId] = statuses;
+    });
+
+    setPaymentStatuses(newStatuses);
+  };
+
   useEffect(() => {
-    const loadPaymentStatuses = async () => {
-      if (!expenses.length) return;
-
-      const statusPromises = expenses.map(async (expense) => {
-        const debts = calculateDebts(expense);
-        const debtStatuses: PaymentStatus = {};
-
-        for (const debt of debts) {
-          const status = await getDebtStatus(expense, debt.name);
-          const showPaidButton = await shouldShowPaidButton(expense, debt.name);
-          const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
-
-          debtStatuses[debt.name] = {
-            status,
-            showPaidButton,
-            showConfirmButton
-          };
-        }
-
-        return { expenseId: expense.id, statuses: debtStatuses };
-      });
-
-      const results = await Promise.all(statusPromises);
-      const newStatuses: Record<string, PaymentStatus> = {};
-
-      results.forEach(({ expenseId, statuses }) => {
-        newStatuses[expenseId] = statuses;
-      });
-
-      setPaymentStatuses(newStatuses);
-    };
-
     loadPaymentStatuses();
   }, [expenses, user]);
 
@@ -184,6 +184,10 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     const result = await addExpense(expenseData);
     if (result) {
       expenseForm.reset();
+      // Refresh payment statuses immediately after adding expense
+      setTimeout(() => {
+        loadPaymentStatuses();
+      }, 100);
     }
   };
 
@@ -248,29 +252,10 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       description: `${memberName} says they have paid. Waiting for confirmation.`,
     });
     
-    // Refresh payment statuses
-    const expense = expenses.find(e => e.id === expenseId);
-    if (expense) {
-      const debts = calculateDebts(expense);
-      const debtStatuses: PaymentStatus = {};
-
-      for (const debt of debts) {
-        const status = await getDebtStatus(expense, debt.name);
-        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
-        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
-
-        debtStatuses[debt.name] = {
-          status,
-          showPaidButton,
-          showConfirmButton
-        };
-      }
-
-      setPaymentStatuses(prev => ({
-        ...prev,
-        [expenseId]: debtStatuses
-      }));
-    }
+    // Refresh payment statuses immediately
+    setTimeout(() => {
+      loadPaymentStatuses();
+    }, 100);
   };
 
   const handleConfirmPayment = async (expenseId: string, memberName: string, expenseDescription: string) => {
@@ -301,28 +286,10 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       description: `Payment from ${memberName} has been confirmed.`,
     });
     
-    // Refresh payment statuses
-    if (expense) {
-      const debts = calculateDebts(expense);
-      const debtStatuses: PaymentStatus = {};
-
-      for (const debt of debts) {
-        const status = await getDebtStatus(expense, debt.name);
-        const showPaidButton = await shouldShowPaidButton(expense, debt.name);
-        const showConfirmButton = await shouldShowConfirmButton(expense, debt.name);
-
-        debtStatuses[debt.name] = {
-          status,
-          showPaidButton,
-          showConfirmButton
-        };
-      }
-
-      setPaymentStatuses(prev => ({
-        ...prev,
-        [expenseId]: debtStatuses
-      }));
-    }
+    // Refresh payment statuses immediately
+    setTimeout(() => {
+      loadPaymentStatuses();
+    }, 100);
   };
 
   const calculateDebts = (expense: any) => {
@@ -413,7 +380,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           <DollarSign className="h-5 w-5" />
           Expenses
         </CardTitle>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-2">
           <Sheet>
             <SheetTrigger asChild>
               <Button 
@@ -719,14 +686,21 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
                     <h3 className="font-medium text-gray-200">{expense.description}</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-green-400">£{expense.amount.toFixed(2)}</span>
-                      <Button 
-                        onClick={() => deleteExpense(expense.id)}
-                        variant="outline"
-                        size="sm"
-                        className="h-6 px-2 text-xs border-red-600 text-red-400 hover:bg-red-700"
-                      >
-                        Delete
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                          <DropdownMenuItem
+                            onClick={() => deleteExpense(expense.id)}
+                            className="text-red-400 hover:bg-red-700 hover:text-red-300"
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   
