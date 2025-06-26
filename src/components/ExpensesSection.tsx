@@ -143,7 +143,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }
   };
 
-  const logPaymentAction = async (expenseId: string, memberName: string, action: 'claimed' | 'confirmed', expenseDescription: string) => {
+  const logPaymentAction = async (expenseId: string, memberName: string, action: 'claimed' | 'confirmed' | 'completed', expenseDescription: string) => {
     try {
       await supabase.from('payment_logs').insert({
         household_id: selectedHouseholdId,
