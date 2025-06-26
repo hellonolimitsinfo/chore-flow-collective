@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Plus, MoreHorizontal, Trash2, CreditCard, Check, X } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, CreditCard, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

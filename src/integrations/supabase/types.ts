@@ -113,6 +113,48 @@ export type Database = {
           },
         ]
       }
+      expense_history: {
+        Row: {
+          amount: number
+          bank_details: string
+          created_at: string
+          description: string
+          household_id: string
+          id: string
+          original_expense_id: string
+          owed_by: string[]
+          paid_by: string
+          settled_at: string
+          split_type: string
+        }
+        Insert: {
+          amount: number
+          bank_details: string
+          created_at: string
+          description: string
+          household_id: string
+          id?: string
+          original_expense_id: string
+          owed_by?: string[]
+          paid_by: string
+          settled_at?: string
+          split_type: string
+        }
+        Update: {
+          amount?: number
+          bank_details?: string
+          created_at?: string
+          description?: string
+          household_id?: string
+          id?: string
+          original_expense_id?: string
+          owed_by?: string[]
+          paid_by?: string
+          settled_at?: string
+          split_type?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
