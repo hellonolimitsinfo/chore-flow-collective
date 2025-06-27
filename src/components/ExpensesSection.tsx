@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, MoreHorizontal, Trash2, CreditCard, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ interface Expense {
   bank_details: string;
   created_at: string;
   updated_at: string;
+  custom_amounts?: Record<string, number>;
 }
 
 type PaymentState = 'pending' | 'claimed' | 'confirmed';
@@ -240,10 +242,12 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   };
 
   const calculateOwedAmount = (expense: Expense, memberName: string) => {
-    if (expense.split_type === 'equal') {
-      return expense.amount / expense.owed_by.length;
+    // Check if custom amounts exist and use them
+    if (expense.custom_amounts && expense.custom_amounts[memberName] !== undefined) {
+      return expense.custom_amounts[memberName];
     }
-    // For individual split, assume equal for now
+    
+    // Fallback to equal split
     return expense.amount / expense.owed_by.length;
   };
 
@@ -421,7 +425,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
 
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-gray-300 mb-2">
-                      {expense.split_type === 'equal' ? 'Split equally among:' : 'Owed by:'}
+                      {expense.split_type === 'equal' && !expense.custom_amounts ? 'Split equally among:' : 'Owed by:'}
                     </div>
                     {expense.owed_by.map(person => {
                       const state = getPaymentState(expense.id, person);
@@ -512,7 +516,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
 
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-gray-300 mb-2">
-                        {expense.split_type === 'equal' ? 'Split equally among:' : 'Owed by:'}
+                        {expense.split_type === 'equal' && !expense.custom_amounts ? 'Split equally among:' : 'Owed by:'}
                       </div>
                       {expense.owed_by.map(person => {
                         const owedAmount = calculateOwedAmount(expense, person);

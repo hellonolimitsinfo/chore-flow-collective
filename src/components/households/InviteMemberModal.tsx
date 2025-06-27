@@ -69,7 +69,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       console.log('Created pending invite with ID:', inviteData.id);
 
-      // Set the token for generating the invite link
+      // Use the generated ID as the token
       setInviteToken(inviteData.id);
       setShowEmailInput(false);
 
