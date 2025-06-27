@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -12,8 +11,7 @@ import { ChoresSection } from "@/components/ChoresSection";
 import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
-import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
-import { LanguageToggle } from "@/components/LanguageToggle";
+// import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
@@ -148,10 +146,9 @@ const Index = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <LanguageToggle />
+        <div className="flex justify-end items-center mb-4">
           <UserMenu user={{ 
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
             email: user.email || ''
@@ -201,8 +198,8 @@ const Index = () => {
           )}
         </section>
 
-        {/* Urgent Items Section - Separate Row */}
-        {flaggedItems.length > 0 && (
+        {/* Urgent Items Section - Commented out but keeping the code */}
+        {/* {flaggedItems.length > 0 && (
           <section className="mb-8">
             <UrgentItemsSection 
               flaggedItems={flaggedItems}
@@ -210,7 +207,7 @@ const Index = () => {
               onMarkPurchased={handleUrgentItemBought}
             />
           </section>
-        )}
+        )} */}
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           <div>
@@ -227,7 +224,7 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="mb-8">
+        <section>
           <HistorySection selectedHouseholdId={selectedHouseholdId} />
         </section>
       </main>
