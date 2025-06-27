@@ -23,12 +23,12 @@ const Index = () => {
   const { user, loading } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold } = useHouseholds();
+  const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold, refetch: refetchHouseholds } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   
-  // Handle invitation processing
-  useInvitationHandler();
+  // Handle invitation processing with household refetch
+  useInvitationHandler({ refetchHouseholds });
 
   // Get shopping items and members for urgent section
   const { shoppingItems, updateShoppingItem, refreshItems } = useShoppingItems(selectedHouseholdId);
@@ -144,7 +144,7 @@ const Index = () => {
   const flaggedItems = shoppingItems.filter(item => !item.is_purchased && item.purchased_by);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4">
         <div className="flex justify-end items-center mb-4">
           <UserMenu user={{ 

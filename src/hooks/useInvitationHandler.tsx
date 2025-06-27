@@ -5,7 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 
-export const useInvitationHandler = () => {
+interface UseInvitationHandlerProps {
+  refetchHouseholds?: () => Promise<void>;
+}
+
+export const useInvitationHandler = ({ refetchHouseholds }: UseInvitationHandlerProps = {}) => {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -137,6 +141,11 @@ export const useInvitationHandler = () => {
               .delete()
               .eq('id', token);
             
+            // Refetch households to update UI
+            if (refetchHouseholds) {
+              await refetchHouseholds();
+            }
+            
             // Navigate to home
             navigate('/');
             return;
@@ -182,6 +191,11 @@ export const useInvitationHandler = () => {
 
           setSearchParams(new URLSearchParams());
           localStorage.removeItem('pending_invite_token');
+          
+          // Refetch households to update UI immediately
+          if (refetchHouseholds) {
+            await refetchHouseholds();
+          }
           
           // Navigate to home after successful join
           navigate('/');
@@ -244,6 +258,11 @@ export const useInvitationHandler = () => {
           // Clear the URL parameters and localStorage
           setSearchParams(new URLSearchParams());
           localStorage.removeItem('pending_invitation');
+          
+          // Refetch households to update UI
+          if (refetchHouseholds) {
+            await refetchHouseholds();
+          }
           return;
         }
         
@@ -289,6 +308,11 @@ export const useInvitationHandler = () => {
         if (deleteError) {
           console.error('Error cleaning up invitation:', deleteError);
           // Don't show error to user as this is cleanup
+        }
+        
+        // Refetch households to update UI immediately
+        if (refetchHouseholds) {
+          await refetchHouseholds();
         }
           
       } catch (error) {
