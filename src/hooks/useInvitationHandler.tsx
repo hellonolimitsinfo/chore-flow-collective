@@ -161,7 +161,7 @@ export const useInvitationHandler = () => {
             console.error('Error fetching household:', householdError);
           }
             
-          toast.success(`Successfully joined ${household?.name || 'the household'}!`);
+          toast.success(`You've joined ${household?.name || 'the household'}!`);
 
           // Clean up the used invite
           await supabase

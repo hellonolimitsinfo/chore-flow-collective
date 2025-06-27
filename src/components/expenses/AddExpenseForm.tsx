@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,17 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
     }
 
     const owedBy = formData.split_type === 'equal' ? memberNames : formData.owed_by;
+
+    // For individual split, validate that custom amounts sum to total amount
+    if (formData.split_type === 'individual' && formData.owed_by.length > 0) {
+      const totalCustomAmounts = getTotalEntered();
+      const totalAmount = parseFloat(formData.amount);
+      
+      if (Math.abs(totalCustomAmounts - totalAmount) > 0.01) {
+        alert(`Custom amounts (£${totalCustomAmounts.toFixed(2)}) must equal the total amount (£${totalAmount.toFixed(2)})`);
+        return;
+      }
+    }
 
     await onSubmit({
       household_id: householdId,
@@ -110,7 +122,7 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
     const newCustomAmounts: Record<string, number> = {};
     
     formData.owed_by.forEach(member => {
-      newCustomAmounts[member] = equalAmount;
+      newCustomAmounts[member] = parseFloat(equalAmount.toFixed(2));
     });
     
     setFormData(prev => ({

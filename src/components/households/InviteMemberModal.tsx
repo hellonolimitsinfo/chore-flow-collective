@@ -50,6 +50,8 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
     setIsGeneratingLink(true);
 
     try {
+      console.log('Creating pending invite for household:', householdId, 'with email:', email.trim() || 'null');
+      
       // Create pending invite record in database
       const { data: inviteData, error: inviteError } = await supabase
         .from('pending_invites')
@@ -60,7 +62,12 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
         .select('id')
         .single();
 
-      if (inviteError) throw inviteError;
+      if (inviteError) {
+        console.error('Error creating pending invite:', inviteError);
+        throw inviteError;
+      }
+
+      console.log('Created pending invite with ID:', inviteData.id);
 
       // Set the token for generating the invite link
       setInviteToken(inviteData.id);
