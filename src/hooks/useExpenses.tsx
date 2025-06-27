@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +13,7 @@ interface Expense {
   bank_details: string;
   created_at: string;
   updated_at: string;
+  custom_amounts?: Record<string, number>;
 }
 
 interface CreateExpenseData {
@@ -24,6 +24,7 @@ interface CreateExpenseData {
   split_type: 'equal' | 'individual';
   owed_by: string[];
   bank_details: string;
+  custom_amounts?: Record<string, number>;
 }
 
 export const useExpenses = (householdId: string | null) => {
