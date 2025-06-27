@@ -35,39 +35,22 @@ export const useInvitationHandler = () => {
         }
       }
       
-      // Then check URL parameters for email-based invitations
-      let inviteEmail = searchParams.get('invite_email');
-      let householdId = searchParams.get('household_id');
-      
-      // If not in URL, check localStorage for email-based invitations
-      if (!inviteEmail || !householdId) {
-        const pendingInvitation = localStorage.getItem('pending_invitation');
-        if (pendingInvitation) {
-          try {
-            const invitation = JSON.parse(pendingInvitation);
-            inviteEmail = invitation.invite_email;
-            householdId = invitation.household_id;
-            console.log('Retrieved invitation from localStorage:', { inviteEmail, householdId });
-          } catch (error) {
-            console.error('Error parsing stored invitation:', error);
-            localStorage.removeItem('pending_invitation');
-          }
-        }
-      }
-
       // Handle token-based invitations
       if (token && user) {
-        console.log('Processing token-based invitation:', { token });
+        console.log('Processing token-based invitation with cleaned token:', token);
 
         try {
           console.log('User authenticated, processing token invitation for user:', user.email);
           
           // Look up the pending invite using the token as the id
+          console.log('Querying pending_invites table with id:', token);
           const { data: pendingInvite, error: inviteError } = await supabase
             .from('pending_invites')
             .select('household_id, email, expires_at')
             .eq('id', token)
             .maybeSingle();
+
+          console.log('Supabase query result:', { pendingInvite, inviteError });
 
           if (inviteError) {
             console.error('Error fetching pending invite:', inviteError);
