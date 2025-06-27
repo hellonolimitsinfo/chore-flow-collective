@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -16,7 +15,7 @@ import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +33,11 @@ const Index = () => {
   // Get shopping items and members for urgent section
   const { shoppingItems, updateShoppingItem, refreshItems } = useShoppingItems(selectedHouseholdId);
   const { members } = useHouseholdMembers(selectedHouseholdId);
+
+  // Memoize flagged items to ensure React re-renders when shoppingItems changes
+  const flaggedItems = useMemo(() => {
+    return shoppingItems.filter(item => !item.is_purchased && item.purchased_by);
+  }, [shoppingItems]);
 
   if (loading) {
     return (
@@ -140,9 +144,6 @@ const Index = () => {
       });
     }
   };
-
-  // Get flagged items (items that have purchased_by set but are not purchased)
-  const flaggedItems = shoppingItems.filter(item => !item.is_purchased && item.purchased_by);
 
   return (
     <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
