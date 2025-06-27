@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -122,7 +121,7 @@ const Index = () => {
       });
 
       // Refresh the shopping items to ensure both sections are updated
-      refreshItems();
+      await refreshItems();
       
       const nextMember = members[nextMemberIndex];
       const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Mail, X, Copy, Check, Link } from "lucide-react";
+import { Mail, X, Copy, Check, Link, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
   const [inviteToken, setInviteToken] = useState("");
   const [copied, setCopied] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(true);
   const { user } = useAuth();
 
   const generateInviteLink = (token: string) => {
@@ -63,6 +64,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       // Set the token for generating the invite link
       setInviteToken(inviteData.id);
+      setShowEmailInput(false);
 
       toast.success("Invite link generated!");
     } catch (error: any) {
@@ -123,6 +125,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       // Set the token for generating the invite link
       setInviteToken(pendingInviteData.id);
+      setShowEmailInput(false);
 
       // Send invitation email
       const { data, error } = await supabase.functions.invoke('send-invitation', {
@@ -152,7 +155,14 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
     setEmail("");
     setInviteToken("");
     setCopied(false);
+    setShowEmailInput(true);
     onClose();
+  };
+
+  const handleBackToEmail = () => {
+    setShowEmailInput(true);
+    setInviteToken("");
+    setCopied(false);
   };
 
   return (
@@ -166,70 +176,87 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address (Optional)</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter email address (optional)"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && email.trim()) {
-                  handleSendInvitation();
-                }
-              }}
-            />
-          </div>
-
-          {inviteToken && (
-            <div className="space-y-2">
-              <Label htmlFor="invite-link">Invite Link</Label>
-              <div className="flex gap-2">
+          {showEmailInput ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address (Optional)</Label>
                 <Input
-                  id="invite-link"
-                  value={generateInviteLink(inviteToken)}
-                  readOnly
-                  className="bg-gray-100 text-sm"
+                  id="email"
+                  type="email"
+                  placeholder="Enter email address (optional)"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && email.trim()) {
+                      handleSendInvitation();
+                    }
+                  }}
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => copyToClipboard(generateInviteLink(inviteToken))}
-                  className="px-3"
+              </div>
+              
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={handleClose} disabled={isLoading || isGeneratingLink}>
+                  Cancel
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={generateInviteOnly} 
+                  disabled={isLoading || isGeneratingLink}
+                  className="flex items-center gap-2"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <Link className="w-4 h-4" />
+                  {isGeneratingLink ? "Generating..." : "Generate Link"}
+                </Button>
+                
+                {email.trim() && (
+                  <Button onClick={handleSendInvitation} disabled={isLoading || isGeneratingLink}>
+                    {isLoading ? "Sending..." : "Send Invitation"}
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="invite-link">Invite Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="invite-link"
+                    value={generateInviteLink(inviteToken)}
+                    readOnly
+                    className="bg-gray-100 text-sm text-black"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => copyToClipboard(generateInviteLink(inviteToken))}
+                    className="px-3"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Share this link with anyone to invite them to the household.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={handleBackToEmail}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Invite by Email Instead
+                </Button>
+                
+                <Button variant="outline" onClick={handleClose}>
+                  Done
                 </Button>
               </div>
-              <p className="text-sm text-gray-600">
-                Share this link with anyone to invite them to the household.
-              </p>
-            </div>
+            </>
           )}
-          
-          <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={handleClose} disabled={isLoading || isGeneratingLink}>
-              Cancel
-            </Button>
-            
-            {!inviteToken && (
-              <Button 
-                variant="outline" 
-                onClick={generateInviteOnly} 
-                disabled={isLoading || isGeneratingLink}
-                className="flex items-center gap-2"
-              >
-                <Link className="w-4 h-4" />
-                {isGeneratingLink ? "Generating..." : "Generate Link Only"}
-              </Button>
-            )}
-            
-            {email.trim() && (
-              <Button onClick={handleSendInvitation} disabled={isLoading || isGeneratingLink}>
-                {isLoading ? "Sending..." : "Send Invitation"}
-              </Button>
-            )}
-          </div>
         </div>
       </DialogContent>
     </Dialog>
