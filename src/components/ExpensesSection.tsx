@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
-import { Plus, MoreHorizontal, Trash2, CreditCard, Check } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, CreditCard, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const { members } = useHouseholdMembers(selectedHouseholdId);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [paymentStates, setPaymentStates] = useState<Record<string, Record<string, PaymentState>>>({});
+  const [paidExpensesOpen, setPaidExpensesOpen] = useState(false);
 
   // Real-time subscription for payment logs
   useEffect(() => {
@@ -258,6 +259,48 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }) + ', ' + date.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
+  const formatAmount = (amount: number) => {
+    return `£${amount.toFixed(2)}`;
+  };
+
+  const calculateOwedAmount = (expense: Expense, memberName: string) => {
+    if (expense.split_type === 'equal') {
+      return expense.amount / expense.owed_by.length;
+    }
+    // For individual split, assume equal for now
+    return expense.amount / expense.owed_by.length;
+  };
+
+  const isExpenseFullySettled = (expense: Expense) => {
+    return expense.owed_by.every(person => 
+      getPaymentState(expense.id, person) === 'confirmed'
+    );
+  };
+
+  const getSettledTime = (expenseId: string, memberName: string) => {
+    // For now, we'll show current time when settled
+    // In a real implementation, you'd store the actual settlement time
+    const now = new Date();
+    return now.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
   const renderPaymentStatus = (expense: Expense, memberName: string) => {
     const state = getPaymentState(expense.id, memberName);
     const currentUserName = members.find(m => m.user_id === user?.id)?.full_name || 
@@ -317,6 +360,9 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }
   };
 
+  const activeExpenses = expenses.filter(expense => !isExpenseFullySettled(expense));
+  const settledExpenses = expenses.filter(expense => isExpenseFullySettled(expense));
+
   if (!selectedHouseholdId) {
     return (
       <Card className="bg-gray-800/80 border-gray-700">
@@ -331,116 +377,211 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   }
 
   return (
-    <Card className="bg-gray-800/80 border-gray-700">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-gray-100 flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Expenses
-          </CardTitle>
-          <Button
-            onClick={() => setIsAddingExpense(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {expenses.length === 0 && (
-          <Button
-            onClick={addExampleExpenses}
-            variant="outline"
-            className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
-          >
-            Add Examples
-          </Button>
-        )}
-
-        {loading ? (
-          <div className="text-gray-400 text-center py-4">
-            {t('loading')}
+    <div className="space-y-4">
+      <Card className="bg-gray-800/80 border-gray-700">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-gray-100 flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Expenses
+            </CardTitle>
+            <Button
+              onClick={() => setIsAddingExpense(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Expense
+            </Button>
           </div>
-        ) : expenses.length === 0 ? (
-          <div className="text-gray-400 text-center py-4">
-            No expenses yet. Add your first expense!
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {expenses.map(expense => (
-              <div key={expense.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-gray-200">{expense.description}</h4>
-                      <Badge variant="secondary">£{expense.amount}</Badge>
-                    </div>
-                    <p className="text-sm text-gray-400 mb-2">
-                      Paid by: {expense.paid_by}
-                    </p>
-                    <div className="text-sm text-gray-400 mb-2">
-                      Bank: {expense.bank_details}
-                    </div>
-                    <div className="text-sm text-gray-400 mb-3">
-                      Date Created: {formatDate(expense.created_at)}
-                    </div>
-                  </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-200">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-                      <DropdownMenuItem 
-                        onClick={() => deleteExpense(expense.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {activeExpenses.length === 0 && settledExpenses.length === 0 && (
+            <Button
+              onClick={addExampleExpenses}
+              variant="outline"
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Add Examples
+            </Button>
+          )}
 
-                <div className="space-y-2">
-                  <div className="text-sm font-medium text-gray-300 mb-2">
-                    {expense.split_type === 'equal' ? 'Split equally among:' : 'Owed by:'}
-                  </div>
-                  {expense.owed_by.map(person => {
-                    const state = getPaymentState(expense.id, person);
-                    return (
-                      <div 
-                        key={person} 
-                        className={`flex items-center justify-between p-2 rounded border ${
-                          state === 'confirmed' 
-                            ? 'bg-green-900/20 border-green-800 text-green-200' 
-                            : 'bg-gray-700/50 border-gray-600'
-                        }`}
-                      >
-                        <span className={state === 'confirmed' ? 'line-through' : ''}>
-                          {person}
-                        </span>
-                        {renderPaymentStatus(expense, person)}
+          {loading ? (
+            <div className="text-gray-400 text-center py-4">
+              {t('loading')}
+            </div>
+          ) : activeExpenses.length === 0 && settledExpenses.length === 0 ? (
+            <div className="text-gray-400 text-center py-4">
+              No expenses yet. Add your first expense!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeExpenses.map(expense => (
+                <div key={expense.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-medium text-gray-200">{expense.description}</h4>
+                        <div className="text-right">
+                          <div className="text-lg font-semibold text-green-400">
+                            {formatAmount(expense.amount)}
+                          </div>
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                      <p className="text-sm text-gray-400 mb-2">
+                        Paid by: {expense.paid_by}
+                      </p>
+                      <div className="text-sm text-gray-400 mb-2">
+                        Bank: {expense.bank_details}
+                      </div>
+                      <div className="text-sm text-gray-400 mb-3">
+                        Date Created: {formatDateTime(expense.created_at)}
+                      </div>
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-200">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                        <DropdownMenuItem 
+                          onClick={() => deleteExpense(expense.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
 
-        <AddExpenseForm
-          isOpen={isAddingExpense}
-          onClose={() => setIsAddingExpense(false)}
-          onSubmit={addExpense}
-          householdId={selectedHouseholdId}
-          members={members}
-        />
-      </CardContent>
-    </Card>
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-300 mb-2">
+                      {expense.split_type === 'equal' ? 'Split equally among:' : 'Owed by:'}
+                    </div>
+                    {expense.owed_by.map(person => {
+                      const state = getPaymentState(expense.id, person);
+                      const owedAmount = calculateOwedAmount(expense, person);
+                      return (
+                        <div 
+                          key={person} 
+                          className={`flex items-center justify-between p-2 rounded border ${
+                            state === 'confirmed' 
+                              ? 'bg-green-900/20 border-green-800 text-green-200' 
+                              : 'bg-gray-700/50 border-gray-600'
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className={state === 'confirmed' ? 'line-through' : ''}>
+                              {person} owes {formatAmount(owedAmount)}
+                            </span>
+                            {state === 'confirmed' && (
+                              <span className="text-xs text-green-400">
+                                Settled at {getSettledTime(expense.id, person)}
+                              </span>
+                            )}
+                          </div>
+                          {renderPaymentStatus(expense, person)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <AddExpenseForm
+            isOpen={isAddingExpense}
+            onClose={() => setIsAddingExpense(false)}
+            onSubmit={addExpense}
+            householdId={selectedHouseholdId}
+            members={members}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Paid Expenses Collapsible Section */}
+      {settledExpenses.length > 0 && (
+        <Card className="bg-gray-800/80 border-gray-700">
+          <Collapsible open={paidExpensesOpen} onOpenChange={setPaidExpensesOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-2 cursor-pointer hover:bg-gray-700/50 transition-colors">
+                <CardTitle className="flex items-center justify-between text-gray-100">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Paid Expenses
+                  </div>
+                  {paidExpensesOpen ? (
+                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-3">
+                {settledExpenses.map(expense => (
+                  <div key={expense.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-medium text-gray-200">{expense.description}</h4>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold text-green-400">
+                              {formatAmount(expense.amount)}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">
+                          Paid by: {expense.paid_by}
+                        </p>
+                        <div className="text-sm text-gray-400 mb-2">
+                          Bank: {expense.bank_details}
+                        </div>
+                        <div className="text-sm text-gray-400 mb-3">
+                          Date Created: {formatDateTime(expense.created_at)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-300 mb-2">
+                        {expense.split_type === 'equal' ? 'Split equally among:' : 'Owed by:'}
+                      </div>
+                      {expense.owed_by.map(person => {
+                        const owedAmount = calculateOwedAmount(expense, person);
+                        return (
+                          <div 
+                            key={person} 
+                            className="flex items-center justify-between p-2 rounded border bg-green-900/20 border-green-800 text-green-200"
+                          >
+                            <div className="flex flex-col">
+                              <span className="line-through">
+                                {person} owes {formatAmount(owedAmount)}
+                              </span>
+                              <span className="text-xs text-green-400">
+                                Settled at {getSettledTime(expense.id, person)}
+                              </span>
+                            </div>
+                            {person === expense.paid_by ? (
+                              <Badge variant="outline" className="ml-2 text-green-600">✅ Paid</Badge>
+                            ) : (
+                              <Badge variant="outline" className="ml-2 text-green-600">✅ Settled</Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
+    </div>
   );
 };

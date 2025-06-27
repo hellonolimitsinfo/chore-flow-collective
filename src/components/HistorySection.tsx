@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart, CreditCard, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,15 +121,16 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
     }
   }, [selectedHouseholdId, isOpen]);
 
-  const formatExactDate = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString(undefined, {
+    return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: 'numeric'
+    }) + ', ' + date.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      hour12: false
     });
   };
 
@@ -213,8 +215,7 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
                         {getItemDescription(item)}
                       </p>
                       <div className="text-xs text-gray-500">
-                        {item.type.includes('payment') && `${t('date_created')}: `}
-                        {formatExactDate(item.completed_at)}
+                        {formatDateTime(item.completed_at)}
                       </div>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 
-import { Flag } from "lucide-react";
+import { Flag, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -43,8 +43,8 @@ export const UrgentItemsSection = ({ flaggedItems, members, onMarkPurchased }: U
       <CardContent>
         <div className="space-y-2">
           {flaggedItems.map(item => (
-            <div key={item.id} className="p-3 border border-red-800 rounded-lg bg-red-900/20">
-              <div className="flex items-center justify-between">
+            <div key={item.id} className="p-4 border border-red-800 rounded-lg bg-red-900/20">
+              <div className="flex items-center justify-between mb-2">
                 <div>
                   <h4 className="font-medium text-red-100">{item.name}</h4>
                   <p className="text-sm text-red-300">
@@ -54,15 +54,22 @@ export const UrgentItemsSection = ({ flaggedItems, members, onMarkPurchased }: U
                     Flagged by: {item.purchased_by}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    onClick={() => onMarkPurchased(item.id)}
-                    className="bg-green-700 hover:bg-green-800 text-xs"
-                  >
-                    Bought
-                  </Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-sm text-red-300">
+                    {getAssignedMember(item)}'s responsibility
+                  </span>
                 </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => onMarkPurchased(item.id)}
+                  className="bg-green-700 hover:bg-green-800"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Bought
+                </Button>
               </div>
             </div>
           ))}
