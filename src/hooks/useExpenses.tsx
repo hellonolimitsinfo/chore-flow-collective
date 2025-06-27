@@ -56,10 +56,11 @@ export const useExpenses = (householdId: string | null) => {
         return;
       }
 
-      // Type assertion to ensure split_type is properly typed
+      // Type assertion and conversion to ensure proper typing
       const typedExpenses = (data || []).map(expense => ({
         ...expense,
-        split_type: expense.split_type as 'equal' | 'individual'
+        split_type: expense.split_type as 'equal' | 'individual',
+        custom_amounts: expense.custom_amounts ? expense.custom_amounts as Record<string, number> : undefined
       }));
 
       setExpenses(typedExpenses);
@@ -93,10 +94,11 @@ export const useExpenses = (householdId: string | null) => {
         return null;
       }
 
-      // Type assertion for the returned data
+      // Type assertion for the returned data with proper custom_amounts conversion
       const typedExpense = {
         ...data,
-        split_type: data.split_type as 'equal' | 'individual'
+        split_type: data.split_type as 'equal' | 'individual',
+        custom_amounts: data.custom_amounts ? data.custom_amounts as Record<string, number> : undefined
       };
 
       setExpenses(prev => [typedExpense, ...prev]);
