@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, Clock, CheckCircle, ShoppingCart, CreditCard, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +17,10 @@ interface HistoryItem {
 
 interface HistorySectionProps {
   selectedHouseholdId: string | null;
+  refreshTrigger?: number; // Add refresh trigger prop
 }
 
-export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => {
+export const HistorySection = ({ selectedHouseholdId, refreshTrigger }: HistorySectionProps) => {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
@@ -120,6 +120,13 @@ export const HistorySection = ({ selectedHouseholdId }: HistorySectionProps) => 
       fetchHistory();
     }
   }, [selectedHouseholdId, isOpen]);
+
+  // Auto-refresh when refreshTrigger changes
+  useEffect(() => {
+    if (isOpen && refreshTrigger) {
+      fetchHistory();
+    }
+  }, [refreshTrigger]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);

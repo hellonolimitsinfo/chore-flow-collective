@@ -26,6 +26,7 @@ const Index = () => {
   const { households, loading: householdsLoading, createHousehold, renameHousehold, removeMember, deleteHousehold, refetch: refetchHouseholds } = useHouseholds();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
   
   // Handle invitation processing with household refetch
   useInvitationHandler({ refetchHouseholds });
@@ -82,6 +83,9 @@ const Index = () => {
         });
 
       if (error) throw error;
+      
+      // Trigger history refresh
+      setHistoryRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error logging shopping action:', error);
     }
@@ -143,6 +147,10 @@ const Index = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const triggerHistoryRefresh = () => {
+    setHistoryRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -211,12 +219,16 @@ const Index = () => {
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           <div>
-            <ChoresSection selectedHouseholdId={selectedHouseholdId} />
+            <ChoresSection 
+              selectedHouseholdId={selectedHouseholdId} 
+              onChoreCompleted={triggerHistoryRefresh}
+            />
           </div>
           <div>
             <ShoppingSection 
               selectedHouseholdId={selectedHouseholdId} 
               onItemUpdated={refreshItems}
+              onShoppingAction={triggerHistoryRefresh}
             />
           </div>
           <div>
@@ -225,7 +237,10 @@ const Index = () => {
         </section>
 
         <section>
-          <HistorySection selectedHouseholdId={selectedHouseholdId} />
+          <HistorySection 
+            selectedHouseholdId={selectedHouseholdId} 
+            refreshTrigger={historyRefreshTrigger}
+          />
         </section>
       </main>
 

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 
 interface ShoppingItemFormValues {
   name: string;
@@ -17,6 +18,7 @@ interface AddShoppingItemSheetProps {
 }
 
 export const AddShoppingItemSheet = ({ isDisabled, disabledTitle, onAddItem }: AddShoppingItemSheetProps) => {
+  const [isOpen, setIsOpen] = useState(false);
   const shoppingForm = useForm<ShoppingItemFormValues>({
     defaultValues: {
       name: ""
@@ -26,10 +28,11 @@ export const AddShoppingItemSheet = ({ isDisabled, disabledTitle, onAddItem }: A
   const handleSubmit = async (values: ShoppingItemFormValues) => {
     await onAddItem(values.name);
     shoppingForm.reset();
+    setIsOpen(false); // Auto-close the sheet
   };
 
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button 
           size="sm" 

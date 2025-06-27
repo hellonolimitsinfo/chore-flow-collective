@@ -1,4 +1,3 @@
-
 import { Calendar, Plus, CheckCircle, MoreHorizontal, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +15,10 @@ import {
 
 interface ChoresSectionProps {
   selectedHouseholdId: string | null;
+  onChoreCompleted?: () => void;
 }
 
-export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
+export const ChoresSection = ({ selectedHouseholdId, onChoreCompleted }: ChoresSectionProps) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isAddingExamples, setIsAddingExamples] = useState(false);
   const { chores, loading, createChore, completeChore, deleteChore } = useChores(selectedHouseholdId);
@@ -29,7 +29,10 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
   };
 
   const handleCompleteChore = async (choreId: string) => {
-    await completeChore(choreId);
+    const success = await completeChore(choreId);
+    if (success && onChoreCompleted) {
+      onChoreCompleted();
+    }
   };
 
   const handleDeleteChore = async (choreId: string) => {
@@ -49,7 +52,6 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
     ];
 
     try {
-      // Distribute chores among household members
       for (let i = 0; i < exampleChores.length; i++) {
         const assignee = members[i % members.length];
         await createChore(
@@ -66,7 +68,6 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
   };
 
   const getAssigneeColor = (assigneeName: string) => {
-    // Generate consistent colors based on name
     const colors = [
       'bg-blue-500',
       'bg-green-500', 
@@ -86,7 +87,7 @@ export const ChoresSection = ({ selectedHouseholdId }: ChoresSectionProps) => {
     <>
       <Card className="bg-gray-800/80 border-gray-700">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="flex items-center gap-2 text-gray-100 text-lg">
+          <CardTitle className="flex items-center gap-2 text-gray-100 text-xl">
             <Calendar className="h-5 w-5" />
             Current Chores
           </CardTitle>

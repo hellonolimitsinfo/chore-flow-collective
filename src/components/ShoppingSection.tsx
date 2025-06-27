@@ -1,4 +1,3 @@
-
 import { ShoppingCart, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +13,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
   onItemUpdated?: () => void;
+  onShoppingAction?: () => void;
 }
 
-export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: ShoppingSectionProps) => {
+export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated, onShoppingAction }: ShoppingSectionProps) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
@@ -44,6 +44,11 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
         });
 
       if (error) throw error;
+      
+      // Notify parent about shopping action
+      if (onShoppingAction) {
+        onShoppingAction();
+      }
     } catch (error) {
       console.error('Error logging shopping action:', error);
     }
@@ -67,12 +72,10 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
   const getCurrentAssignedMember = (item: any) => {
     if (members.length === 0) return 'Unknown';
     
-    // If the item has an assigned_member_index, use that
     if (typeof item.assigned_member_index === 'number' && item.assigned_member_index < members.length) {
       return members[item.assigned_member_index].full_name || members[item.assigned_member_index].email;
     }
     
-    // Fallback to creation order assignment
     const sortedItems = [...shoppingItems].sort((a, b) => 
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
@@ -86,12 +89,10 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
     const item = shoppingItems.find(i => i.id === itemId);
     if (!item) return;
 
-    // Get current assigned member index
     let currentMemberIndex = 0;
     if (typeof item.assigned_member_index === 'number') {
       currentMemberIndex = item.assigned_member_index;
     } else {
-      // Calculate based on creation order if not set
       const sortedItems = [...shoppingItems].sort((a, b) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
@@ -99,26 +100,21 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
       currentMemberIndex = itemIndex % members.length;
     }
     
-    // Get current assigned member name for logging
     const currentMember = members[currentMemberIndex];
     const assignedMemberName = currentMember?.full_name || currentMember?.email || 'Unknown';
     
-    // Calculate next member index
     const nextMemberIndex = (currentMemberIndex + 1) % members.length;
     const nextMember = members[nextMemberIndex];
     const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
     
-    // Log the shopping action with the assigned member who was supposed to buy it
     await logShoppingAction('purchased', item.name, assignedMemberName);
     
-    // Reset item to default state and assign to next person
     await updateShoppingItem(itemId, { 
       is_purchased: false,
       purchased_by: null,
       assigned_member_index: nextMemberIndex
     });
     
-    // Notify parent component that item was updated
     if (onItemUpdated) {
       onItemUpdated();
     }
@@ -134,14 +130,12 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
     const item = shoppingItems.find(i => i.id === itemId);
     if (!item) return;
     
-    // Log the shopping action
     await logShoppingAction('flagged_low', item.name, currentUserName);
     
     await updateShoppingItem(itemId, { 
       purchased_by: currentUserName
     });
     
-    // Notify parent component that item was updated
     if (onItemUpdated) {
       onItemUpdated();
     }
@@ -155,7 +149,6 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
   const isAddButtonDisabled = !selectedHouseholdId || membersLoading || members.length === 0;
   const shouldShowExamplesButton = shoppingItems.length === 0 && selectedHouseholdId && members.length > 0;
 
-  // Sort items: flagged first, then regular items by creation date
   const sortedItems = [...shoppingItems].sort((a, b) => {
     const aFlagged = !a.is_purchased && a.purchased_by;
     const bFlagged = !b.is_purchased && b.purchased_by;
