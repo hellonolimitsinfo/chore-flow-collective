@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,11 +10,13 @@ export const useInvitationHandler = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const hasRunRef = useRef(false);
   
   useEffect(() => {
+    if (hasRunRef.current || loading) return; // prevent duplicate run
+    hasRunRef.current = true;
+
     const handleInvitation = async () => {
-      if (loading) return; // wait until auth is done loading
-      
       // Check for token-based invitations first (from either /auth or /join routes)
       let token = searchParams.get('token');
       
@@ -302,5 +304,5 @@ export const useInvitationHandler = () => {
     
     // Run the handler when we have necessary conditions
     handleInvitation();
-  }, [user, searchParams, setSearchParams, navigate, loading, location.pathname]);
+  }, [user, loading]); // Keep dependencies minimal
 };
