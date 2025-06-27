@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +36,26 @@ export const useInvitationHandler = () => {
         }
       }
       
+      // Then check URL parameters for email-based invitations
+      let inviteEmail = searchParams.get('invite_email');
+      let householdId = searchParams.get('household_id');
+      
+      // If not in URL, check localStorage for email-based invitations
+      if (!inviteEmail || !householdId) {
+        const pendingInvitation = localStorage.getItem('pending_invitation');
+        if (pendingInvitation) {
+          try {
+            const invitation = JSON.parse(pendingInvitation);
+            inviteEmail = invitation.invite_email;
+            householdId = invitation.household_id;
+            console.log('Retrieved invitation from localStorage:', { inviteEmail, householdId });
+          } catch (error) {
+            console.error('Error parsing stored invitation:', error);
+            localStorage.removeItem('pending_invitation');
+          }
+        }
+      }
+
       // Handle token-based invitations
       if (token && user) {
         console.log('Processing token-based invitation with cleaned token:', token);
