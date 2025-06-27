@@ -3,12 +3,13 @@ import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 
 export const useInvitationHandler = () => {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
   useEffect(() => {
     const handleInvitation = async () => {
@@ -17,12 +18,19 @@ export const useInvitationHandler = () => {
       // Check for token-based invitations first (from either /auth or /join routes)
       let token = searchParams.get('token');
       
+      // Store token immediately if we're on /join route and user is not authenticated
+      if (token && location.pathname === '/join' && !user) {
+        console.log('Storing token for /join route before auth redirect:', token);
+        localStorage.setItem('pending_invite_token', token);
+        navigate(`/auth?token=${token}`);
+        return;
+      }
+      
       // Also check localStorage for token from auth redirect
       if (!token) {
         const storedToken = localStorage.getItem('pending_invite_token');
         if (storedToken) {
           token = storedToken;
-          localStorage.removeItem('pending_invite_token');
           console.log('Retrieved token from localStorage:', token);
         }
       }
@@ -48,21 +56,13 @@ export const useInvitationHandler = () => {
       }
 
       // Handle token-based invitations
-      if (token) {
+      if (token && user) {
         console.log('Processing token-based invitation:', { token });
-        
-        // If user is not logged in, store token and redirect to auth page
-        if (!user) {
-          console.log('User not authenticated, storing token and redirecting to auth page');
-          localStorage.setItem('pending_invite_token', token);
-          navigate(`/auth?token=${token}`);
-          return;
-        }
 
         try {
           console.log('User authenticated, processing token invitation for user:', user.email);
           
-          // Look up the pending invite
+          // Look up the pending invite using the token as the id
           const { data: pendingInvite, error: inviteError } = await supabase
             .from('pending_invites')
             .select('household_id, email, expires_at')
@@ -73,6 +73,7 @@ export const useInvitationHandler = () => {
             console.error('Error fetching pending invite:', inviteError);
             toast.error('Invalid or expired invitation link');
             setSearchParams(new URLSearchParams());
+            localStorage.removeItem('pending_invite_token');
             return;
           }
 
@@ -80,6 +81,7 @@ export const useInvitationHandler = () => {
             console.error('Pending invite not found for token:', token);
             toast.error('Invalid or expired invitation link');
             setSearchParams(new URLSearchParams());
+            localStorage.removeItem('pending_invite_token');
             return;
           }
 
@@ -90,6 +92,7 @@ export const useInvitationHandler = () => {
             console.error('Invite has expired');
             toast.error('This invitation has expired');
             setSearchParams(new URLSearchParams());
+            localStorage.removeItem('pending_invite_token');
             return;
           }
 
@@ -98,6 +101,7 @@ export const useInvitationHandler = () => {
             console.error('Email mismatch:', { userEmail: user.email, inviteEmail: pendingInvite.email });
             toast.error(`This invitation was sent to ${pendingInvite.email}. Please sign in with that email address.`);
             setSearchParams(new URLSearchParams());
+            localStorage.removeItem('pending_invite_token');
             return;
           }
 
@@ -119,6 +123,7 @@ export const useInvitationHandler = () => {
             console.log('User is already a member');
             toast.success('You are already a member of this household!');
             setSearchParams(new URLSearchParams());
+            localStorage.removeItem('pending_invite_token');
             
             // Clean up the used invite
             await supabase
@@ -163,13 +168,14 @@ export const useInvitationHandler = () => {
             
           toast.success(`You've joined ${household?.name || 'the household'}!`);
 
-          // Clean up the used invite
+          // Clean up the used invite and stored token
           await supabase
             .from('pending_invites')
             .delete()
             .eq('id', token);
 
           setSearchParams(new URLSearchParams());
+          localStorage.removeItem('pending_invite_token');
           
           // Navigate to home after successful join
           navigate('/');
@@ -179,6 +185,7 @@ export const useInvitationHandler = () => {
           console.error('Error processing token-based invitation:', error);
           toast.error('Failed to process invitation');
           setSearchParams(new URLSearchParams());
+          localStorage.removeItem('pending_invite_token');
           return;
         }
       }
@@ -291,5 +298,5 @@ export const useInvitationHandler = () => {
     
     // Run the handler when we have necessary conditions
     handleInvitation();
-  }, [user, searchParams, setSearchParams, navigate, loading]);
+  }, [user, searchParams, setSearchParams, navigate, loading, location.pathname]);
 };

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import AuthHeader from "@/components/auth/AuthHeader";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 import { AuthForm } from "@/components/auth/AuthForm";
@@ -13,6 +13,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   useEffect(() => {
     // Store invitation parameters in localStorage if they exist
