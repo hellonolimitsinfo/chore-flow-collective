@@ -111,22 +111,6 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       if (invitationError) throw invitationError;
 
-      // Also create pending invite for link generation
-      const { data: pendingInviteData, error: pendingInviteError } = await supabase
-        .from('pending_invites')
-        .insert([{
-          household_id: householdId,
-          email: email.trim()
-        }])
-        .select('id')
-        .single();
-
-      if (pendingInviteError) throw pendingInviteError;
-
-      // Set the token for generating the invite link
-      setInviteToken(pendingInviteData.id);
-      setShowEmailInput(false);
-
       // Send invitation email
       const { data, error } = await supabase.functions.invoke('send-invitation', {
         body: {
@@ -143,6 +127,9 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
       }
 
       toast.success(`Invitation sent to ${email}!`);
+      
+      // Close the modal after sending invitation
+      handleClose();
     } catch (error: any) {
       console.error('Error sending invitation:', error);
       toast.error(error.message || "Failed to send invitation");

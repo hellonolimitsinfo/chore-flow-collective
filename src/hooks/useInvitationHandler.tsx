@@ -49,6 +49,8 @@ export const useInvitationHandler = () => {
         }
 
         try {
+          console.log('User authenticated, processing token invitation for user:', user.email);
+          
           // Look up the pending invite
           const { data: pendingInvite, error: inviteError } = await supabase
             .from('pending_invites')
@@ -64,11 +66,13 @@ export const useInvitationHandler = () => {
           }
 
           if (!pendingInvite) {
-            console.error('Pending invite not found');
+            console.error('Pending invite not found for token:', token);
             toast.error('Invalid or expired invitation link');
             setSearchParams(new URLSearchParams());
             return;
           }
+
+          console.log('Found pending invite:', pendingInvite);
 
           // Check if invite has expired
           if (new Date(pendingInvite.expires_at) < new Date()) {
@@ -113,6 +117,8 @@ export const useInvitationHandler = () => {
             return;
           }
 
+          console.log('Adding user to household:', { userId: user.id, householdId: pendingInvite.household_id });
+
           // Add user to household
           const { error: insertError } = await supabase
             .from('household_members')
@@ -127,6 +133,8 @@ export const useInvitationHandler = () => {
             toast.error('Failed to join household');
             return;
           }
+
+          console.log('Successfully added user to household');
 
           // Get household name for success message
           const { data: household, error: householdError } = await supabase
