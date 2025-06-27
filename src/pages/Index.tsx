@@ -213,7 +213,10 @@ const Index = () => {
             <ChoresSection selectedHouseholdId={selectedHouseholdId} />
           </div>
           <div>
-            <ShoppingSection selectedHouseholdId={selectedHouseholdId} onItemUpdated={refreshItems} />
+            <ShoppingSection 
+              selectedHouseholdId={selectedHouseholdId} 
+              onItemUpdated={refreshItems}
+            />
           </div>
           <div>
             <ExpensesSection selectedHouseholdId={selectedHouseholdId} />
