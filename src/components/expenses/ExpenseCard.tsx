@@ -73,6 +73,10 @@ export const ExpenseCard = ({
   };
 
   const getPaymentState = (expenseId: string, memberName: string): PaymentState => {
+    // If this person paid the expense, they're automatically confirmed
+    if (memberName === expense.paid_by) {
+      return 'confirmed';
+    }
     return paymentStates[expenseId]?.[memberName] || 'pending';
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,6 +135,27 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }
   };
 
+  const getPaymentState = (expenseId: string, memberName: string, expense: Expense): PaymentState => {
+    // If this person paid the expense, they're automatically confirmed
+    if (memberName === expense.paid_by) {
+      return 'confirmed';
+    }
+    return paymentStates[expenseId]?.[memberName] || 'pending';
+  };
+
+  const isExpenseFullySettled = (expense: Expense) => {
+    return expense.owed_by.every(person => 
+      getPaymentState(expense.id, person, expense) === 'confirmed'
+    );
+  };
+
+  const activeExpenses = expenses.filter(expense => !isExpenseFullySettled(expense));
+  const settledExpenses = expenses.filter(expense => isExpenseFullySettled(expense));
+
+  const currentUserName = members.find(m => m.user_id === user?.id)?.full_name || 
+                         members.find(m => m.user_id === user?.id)?.email || 
+                         'Unknown';
+
   const handleClaimPayment = async (expense: Expense, memberName: string) => {
     if (!user || !selectedHouseholdId) return;
 
@@ -198,9 +218,13 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         }
       };
 
-      const allConfirmed = expense.owed_by.every(person => 
-        updatedStates[expense.id][person] === 'confirmed'
-      );
+      // Check if all people (including the payer) are confirmed
+      const allConfirmed = expense.owed_by.every(person => {
+        if (person === expense.paid_by) {
+          return true; // Payer is automatically confirmed
+        }
+        return updatedStates[expense.id][person] === 'confirmed';
+      });
 
       if (allConfirmed) {
         toast({
@@ -221,23 +245,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       });
     }
   };
-
-  const getPaymentState = (expenseId: string, memberName: string): PaymentState => {
-    return paymentStates[expenseId]?.[memberName] || 'pending';
-  };
-
-  const isExpenseFullySettled = (expense: Expense) => {
-    return expense.owed_by.every(person => 
-      getPaymentState(expense.id, person) === 'confirmed'
-    );
-  };
-
-  const activeExpenses = expenses.filter(expense => !isExpenseFullySettled(expense));
-  const settledExpenses = expenses.filter(expense => isExpenseFullySettled(expense));
-
-  const currentUserName = members.find(m => m.user_id === user?.id)?.full_name || 
-                         members.find(m => m.user_id === user?.id)?.email || 
-                         'Unknown';
 
   if (!selectedHouseholdId) {
     return (
