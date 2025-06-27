@@ -6,17 +6,20 @@ import { toast } from 'sonner';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export const useInvitationHandler = () => {
-  const { user, loading } = useAuth(); // add loading if available
+  const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   
   useEffect(() => {
     const handleInvitation = async () => {
-      // First check URL parameters
+      // Check for token-based invitations first
+      const token = searchParams.get('token');
+      
+      // Then check URL parameters for email-based invitations
       let inviteEmail = searchParams.get('invite_email');
       let householdId = searchParams.get('household_id');
       
-      // If not in URL, check localStorage
+      // If not in URL, check localStorage for email-based invitations
       if (!inviteEmail || !householdId) {
         const pendingInvitation = localStorage.getItem('pending_invitation');
         if (pendingInvitation) {
@@ -28,17 +31,140 @@ export const useInvitationHandler = () => {
           } catch (error) {
             console.error('Error parsing stored invitation:', error);
             localStorage.removeItem('pending_invitation');
-            return;
           }
         }
       }
-      
+
+      // Handle token-based invitations
+      if (token) {
+        console.log('Processing token-based invitation:', { token });
+
+        if (loading) return; // wait until auth is done loading
+        
+        // If user is not logged in, redirect to auth page with token preserved
+        if (!user) {
+          console.log('User not authenticated, redirecting to auth page with token');
+          navigate(`/auth?token=${token}`);
+          return;
+        }
+
+        try {
+          // Look up the pending invite
+          const { data: pendingInvite, error: inviteError } = await supabase
+            .from('pending_invites')
+            .select('household_id, email, expires_at')
+            .eq('id', token)
+            .maybeSingle();
+
+          if (inviteError) {
+            console.error('Error fetching pending invite:', inviteError);
+            toast.error('Invalid or expired invitation link');
+            setSearchParams(new URLSearchParams());
+            return;
+          }
+
+          if (!pendingInvite) {
+            console.error('Pending invite not found');
+            toast.error('Invalid or expired invitation link');
+            setSearchParams(new URLSearchParams());
+            return;
+          }
+
+          // Check if invite has expired
+          if (new Date(pendingInvite.expires_at) < new Date()) {
+            console.error('Invite has expired');
+            toast.error('This invitation has expired');
+            setSearchParams(new URLSearchParams());
+            return;
+          }
+
+          // If invite has an email, check if user's email matches
+          if (pendingInvite.email && user.email !== pendingInvite.email) {
+            console.error('Email mismatch:', { userEmail: user.email, inviteEmail: pendingInvite.email });
+            toast.error(`This invitation was sent to ${pendingInvite.email}. Please sign in with that email address.`);
+            setSearchParams(new URLSearchParams());
+            return;
+          }
+
+          // Check if user is already a member
+          const { data: existingMember, error: memberError } = await supabase
+            .from('household_members')
+            .select('id')
+            .eq('household_id', pendingInvite.household_id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (memberError) {
+            console.error('Error checking membership:', memberError);
+            toast.error('Failed to check household membership');
+            return;
+          }
+            
+          if (existingMember) {
+            console.log('User is already a member');
+            toast.success('You are already a member of this household!');
+            setSearchParams(new URLSearchParams());
+            
+            // Clean up the used invite
+            await supabase
+              .from('pending_invites')
+              .delete()
+              .eq('id', token);
+            return;
+          }
+
+          // Add user to household
+          const { error: insertError } = await supabase
+            .from('household_members')
+            .insert({
+              household_id: pendingInvite.household_id,
+              user_id: user.id,
+              role: 'member'
+            });
+            
+          if (insertError) {
+            console.error('Error adding user to household:', insertError);
+            toast.error('Failed to join household');
+            return;
+          }
+
+          // Get household name for success message
+          const { data: household, error: householdError } = await supabase
+            .from('households')
+            .select('name')
+            .eq('id', pendingInvite.household_id)
+            .single();
+            
+          if (householdError) {
+            console.error('Error fetching household:', householdError);
+          }
+            
+          toast.success(`Successfully joined ${household?.name || 'the household'}!`);
+
+          // Clean up the used invite
+          await supabase
+            .from('pending_invites')
+            .delete()
+            .eq('id', token);
+
+          setSearchParams(new URLSearchParams());
+          return;
+
+        } catch (error) {
+          console.error('Error processing token-based invitation:', error);
+          toast.error('Failed to process invitation');
+          setSearchParams(new URLSearchParams());
+          return;
+        }
+      }
+
+      // Handle email-based invitations (existing logic)
       if (!inviteEmail || !householdId) {
         console.log('No invitation parameters found');
         return;
       }
       
-      console.log('Processing invitation:', { inviteEmail, householdId, userEmail: user?.email });
+      console.log('Processing email-based invitation:', { inviteEmail, householdId, userEmail: user?.email });
 
       if (loading) return; // wait until auth is done loading
       
@@ -141,8 +267,8 @@ export const useInvitationHandler = () => {
     };
     
     // Only run if we have a user or invitation parameters
-    if (user || searchParams.get('invite_email') || localStorage.getItem('pending_invitation')) {
+    if (user || searchParams.get('invite_email') || searchParams.get('token') || localStorage.getItem('pending_invitation')) {
       handleInvitation();
     }
-  }, [user, searchParams, setSearchParams, navigate]);
+  }, [user, searchParams, setSearchParams, navigate, loading]);
 };

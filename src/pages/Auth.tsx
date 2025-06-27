@@ -18,6 +18,7 @@ const Auth = () => {
     // Store invitation parameters in localStorage if they exist
     const inviteEmail = searchParams.get('invite_email');
     const householdId = searchParams.get('household_id');
+    const token = searchParams.get('token');
     
     if (inviteEmail && householdId) {
       localStorage.setItem('pending_invitation', JSON.stringify({
@@ -33,7 +34,9 @@ const Auth = () => {
       if (session) {
         console.log('User already logged in, redirecting with invitation params');
         // If user is already logged in, redirect with invitation parameters preserved
-        if (inviteEmail && householdId) {
+        if (token) {
+          navigate(`/?token=${token}`);
+        } else if (inviteEmail && householdId) {
           navigate(`/?invite_email=${encodeURIComponent(inviteEmail)}&household_id=${householdId}`);
         } else {
           navigate("/");
@@ -49,7 +52,8 @@ const Auth = () => {
 
   // Get invitation info for display
   const inviteEmail = searchParams.get('invite_email');
-  const isInviteFlow = !!inviteEmail;
+  const token = searchParams.get('token');
+  const isInviteFlow = !!(inviteEmail || token);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -63,7 +67,8 @@ const Auth = () => {
             </CardTitle>
             {isInviteFlow && (
               <p className="text-sm text-slate-400 text-center mt-2">
-                You've been invited to join a household. Please {isLogin ? 'sign in' : 'sign up'} with <span className="text-blue-400">{inviteEmail}</span> to continue.
+                You've been invited to join a household. Please {isLogin ? 'sign in' : 'sign up'} 
+                {inviteEmail && <span className="text-blue-400"> with {inviteEmail}</span>} to continue.
               </p>
             )}
           </CardHeader>

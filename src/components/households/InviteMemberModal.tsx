@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Mail, X, Copy, Check } from "lucide-react";
+import { Mail, X, Copy, Check, Link } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
   const [isLoading, setIsLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const { user } = useAuth();
 
   const generateInviteLink = (token: string) => {
@@ -32,10 +33,43 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success("Invite link copied to clipboard!");
+      toast.success("✅ Link copied!");
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       toast.error("Failed to copy link");
+    }
+  };
+
+  const generateInviteOnly = async () => {
+    if (!user) {
+      toast.error("You must be logged in to generate invitations");
+      return;
+    }
+
+    setIsGeneratingLink(true);
+
+    try {
+      // Create pending invite record in database
+      const { data: inviteData, error: inviteError } = await supabase
+        .from('pending_invites')
+        .insert([{
+          household_id: householdId,
+          email: email.trim() || null // Store email if provided, otherwise null
+        }])
+        .select('id')
+        .single();
+
+      if (inviteError) throw inviteError;
+
+      // Set the token for generating the invite link
+      setInviteToken(inviteData.id);
+
+      toast.success("Invite link generated!");
+    } catch (error: any) {
+      console.error('Error generating invite link:', error);
+      toast.error(error.message || "Failed to generate invite link");
+    } finally {
+      setIsGeneratingLink(false);
     }
   };
 
@@ -62,7 +96,7 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       const inviterName = profile?.full_name || user.email?.split('@')[0] || 'Someone';
 
-      // Create invitation record in database
+      // Create invitation record in database (existing household_invitations table)
       const { data: invitationData, error: invitationError } = await supabase
         .from('household_invitations')
         .insert([{
@@ -75,8 +109,20 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
 
       if (invitationError) throw invitationError;
 
+      // Also create pending invite for link generation
+      const { data: pendingInviteData, error: pendingInviteError } = await supabase
+        .from('pending_invites')
+        .insert([{
+          household_id: householdId,
+          email: email.trim()
+        }])
+        .select('id')
+        .single();
+
+      if (pendingInviteError) throw pendingInviteError;
+
       // Set the token for generating the invite link
-      setInviteToken(invitationData.token);
+      setInviteToken(pendingInviteData.id);
 
       // Send invitation email
       const { data, error } = await supabase.functions.invoke('send-invitation', {
@@ -121,15 +167,15 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
         
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email">Email Address (Optional)</Label>
             <Input
               id="email"
               type="email"
-              placeholder="Enter email address"
+              placeholder="Enter email address (optional)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && email.trim()) {
                   handleSendInvitation();
                 }
               }}
@@ -156,18 +202,33 @@ export const InviteMemberModal = ({ isOpen, onClose, householdId, householdName 
                 </Button>
               </div>
               <p className="text-sm text-gray-600">
-                Share this link with {email} as an alternative to email invitation.
+                Share this link with anyone to invite them to the household.
               </p>
             </div>
           )}
           
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+            <Button variant="outline" onClick={handleClose} disabled={isLoading || isGeneratingLink}>
               Cancel
             </Button>
-            <Button onClick={handleSendInvitation} disabled={isLoading || !email.trim()}>
-              {isLoading ? "Sending..." : "Send Invitation"}
-            </Button>
+            
+            {!inviteToken && (
+              <Button 
+                variant="outline" 
+                onClick={generateInviteOnly} 
+                disabled={isLoading || isGeneratingLink}
+                className="flex items-center gap-2"
+              >
+                <Link className="w-4 h-4" />
+                {isGeneratingLink ? "Generating..." : "Generate Link Only"}
+              </Button>
+            )}
+            
+            {email.trim() && (
+              <Button onClick={handleSendInvitation} disabled={isLoading || isGeneratingLink}>
+                {isLoading ? "Sending..." : "Send Invitation"}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
