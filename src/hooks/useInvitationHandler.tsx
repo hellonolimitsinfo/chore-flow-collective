@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,8 +29,9 @@ export const useInvitationHandler = () => {
       if (!token) {
         const storedToken = localStorage.getItem('pending_invite_token');
         if (storedToken) {
-          token = storedToken;
-          console.log('Retrieved token from localStorage:', token);
+          // Clean the token by removing any embedded quotes
+          token = storedToken.replace(/['"]+/g, '');
+          console.log('Retrieved and cleaned token from localStorage:', token);
         }
       }
       
