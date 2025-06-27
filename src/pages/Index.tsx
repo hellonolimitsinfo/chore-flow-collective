@@ -83,7 +83,7 @@ const Index = () => {
     }
   };
 
-  // Handle urgent items "Bought" button - mark as purchased and rotate to next person
+  // Handle urgent items "Bought" button - should work exactly like shopping items "Bought"
   const handleUrgentItemBought = async (itemId: string) => {
     const currentUserName = user?.user_metadata?.full_name || user?.email || 'Someone';
     const item = shoppingItems.find(i => i.id === itemId);
@@ -110,21 +110,22 @@ const Index = () => {
       
       // Calculate next member index
       const nextMemberIndex = (currentMemberIndex + 1) % members.length;
-      const nextMember = members[nextMemberIndex];
-      const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
       
       // Log the shopping action with the assigned member who was supposed to buy it
       await logShoppingAction('purchased', item.name, assignedMemberName);
       
-      // Reset item to default state and assign to next person
+      // Reset item to default state (remove low stock, clear purchased_by, assign to next person)
       await updateShoppingItem(itemId, { 
         is_purchased: false,
-        purchased_by: null,
+        purchased_by: null, // This removes the "Low Stock" status
         assigned_member_index: nextMemberIndex
       });
 
       // Refresh the shopping items to ensure both sections are updated
       refreshItems();
+      
+      const nextMember = members[nextMemberIndex];
+      const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
       
       toast({
         title: "Item purchased! ✅",

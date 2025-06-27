@@ -40,7 +40,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
   const { members } = useHouseholdMembers(selectedHouseholdId);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [paymentStates, setPaymentStates] = useState<Record<string, Record<string, PaymentState>>>({});
-  const [paidExpensesOpen, setPaidExpensesOpen] = useState(false);
+  const [settledExpensesOpen, setSettledExpensesOpen] = useState(false);
 
   // Real-time subscription for payment logs
   useEffect(() => {
@@ -200,11 +200,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       );
 
       if (allConfirmed) {
-        // Store expense in history before deleting
-        await storeExpenseInHistory(expense);
-        
-        // All debts are settled, remove from expenses list
-        await deleteExpense(expense.id);
         toast({
           title: "Expense fully settled! 🎉",
           description: `All payments for ${expense.description} have been confirmed`,
@@ -223,40 +218,8 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     }
   };
 
-  const storeExpenseInHistory = async (expense: Expense) => {
-    try {
-      const { error } = await supabase
-        .from('expense_history')
-        .insert([{
-          household_id: expense.household_id,
-          original_expense_id: expense.id,
-          description: expense.description,
-          amount: expense.amount,
-          paid_by: expense.paid_by,
-          split_type: expense.split_type,
-          owed_by: expense.owed_by,
-          bank_details: expense.bank_details,
-          created_at: expense.created_at,
-          settled_at: new Date().toISOString()
-        }]);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error storing expense in history:', error);
-    }
-  };
-
   const getPaymentState = (expenseId: string, memberName: string): PaymentState => {
     return paymentStates[expenseId]?.[memberName] || 'pending';
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   };
 
   const formatDateTime = (dateString: string) => {
@@ -350,7 +313,7 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
       
       case 'confirmed':
         return (
-          <Badge variant="outline" className="ml-2 text-green-600 line-through">
+          <Badge variant="outline" className="ml-2 text-green-600">
             ✅ Settled
           </Badge>
         );
@@ -502,18 +465,18 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         </CardContent>
       </Card>
 
-      {/* Paid Expenses Collapsible Section */}
+      {/* Settled Expenses Collapsible Section */}
       {settledExpenses.length > 0 && (
         <Card className="bg-gray-800/80 border-gray-700">
-          <Collapsible open={paidExpensesOpen} onOpenChange={setPaidExpensesOpen}>
+          <Collapsible open={settledExpensesOpen} onOpenChange={setSettledExpensesOpen}>
             <CollapsibleTrigger asChild>
               <CardHeader className="pb-2 cursor-pointer hover:bg-gray-700/50 transition-colors">
                 <CardTitle className="flex items-center justify-between text-gray-100">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
-                    Paid Expenses
+                    Settled Expenses
                   </div>
-                  {paidExpensesOpen ? (
+                  {settledExpensesOpen ? (
                     <ChevronDown className="h-5 w-5 text-gray-400" />
                   ) : (
                     <ChevronRight className="h-5 w-5 text-gray-400" />

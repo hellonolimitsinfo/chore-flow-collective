@@ -17,6 +17,7 @@ interface CreateExpenseData {
   split_type: 'equal' | 'individual';
   owed_by: string[];
   bank_details: string;
+  custom_amounts?: Record<string, number>;
 }
 
 interface AddExpenseFormProps {
@@ -35,7 +36,8 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
     paid_by: '',
     split_type: 'equal' as 'equal' | 'individual',
     owed_by: [] as string[],
-    bank_details: ''
+    bank_details: '',
+    custom_amounts: {} as Record<string, number>
   });
 
   const memberNames = members.map(m => m.full_name || m.email);
@@ -56,7 +58,8 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
       paid_by: formData.paid_by,
       split_type: formData.split_type,
       owed_by: owedBy,
-      bank_details: formData.bank_details
+      bank_details: formData.bank_details,
+      custom_amounts: formData.split_type === 'individual' ? formData.custom_amounts : undefined
     });
 
     // Reset form
@@ -66,7 +69,8 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
       paid_by: '',
       split_type: 'equal',
       owed_by: [],
-      bank_details: ''
+      bank_details: '',
+      custom_amounts: {}
     });
     
     onClose();
@@ -81,16 +85,54 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
     } else {
       setFormData(prev => ({
         ...prev,
-        owed_by: prev.owed_by.filter(name => name !== memberName)
+        owed_by: prev.owed_by.filter(name => name !== memberName),
+        custom_amounts: Object.fromEntries(
+          Object.entries(prev.custom_amounts).filter(([key]) => key !== memberName)
+        )
       }));
     }
+  };
+
+  const handleCustomAmountChange = (memberName: string, amount: string) => {
+    const numAmount = parseFloat(amount) || 0;
+    setFormData(prev => ({
+      ...prev,
+      custom_amounts: {
+        ...prev.custom_amounts,
+        [memberName]: numAmount
+      }
+    }));
+  };
+
+  const handleSplitEqually = () => {
+    const totalAmount = parseFloat(formData.amount) || 0;
+    const equalAmount = totalAmount / formData.owed_by.length;
+    const newCustomAmounts: Record<string, number> = {};
+    
+    formData.owed_by.forEach(member => {
+      newCustomAmounts[member] = equalAmount;
+    });
+    
+    setFormData(prev => ({
+      ...prev,
+      custom_amounts: newCustomAmounts
+    }));
+  };
+
+  const getTotalEntered = () => {
+    return Object.values(formData.custom_amounts).reduce((sum, amount) => sum + (amount || 0), 0);
+  };
+
+  const getRemaining = () => {
+    const totalAmount = parseFloat(formData.amount) || 0;
+    return totalAmount - getTotalEntered();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gray-800 border-gray-700 text-gray-100">
         <DialogHeader>
-          <DialogTitle>{t('add_expense')}</DialogTitle>
+          <DialogTitle>Add Expense</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -181,6 +223,47 @@ export const AddExpenseForm = ({ isOpen, onClose, onSubmit, householdId, members
                   </div>
                 ))}
               </div>
+
+              {formData.owed_by.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <Label>Custom amounts</Label>
+                  {formData.owed_by.map(name => (
+                    <div key={name} className="flex items-center justify-between">
+                      <span className="text-gray-300">{name}</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.custom_amounts[name] || ''}
+                        onChange={(e) => handleCustomAmountChange(name, e.target.value)}
+                        placeholder="0.00"
+                        className="w-24 bg-gray-700 border-gray-600 text-gray-100"
+                      />
+                    </div>
+                  ))}
+                  
+                  <div className="border-t border-gray-600 pt-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-300">Total Entered:</span>
+                      <span className="text-gray-100">£{getTotalEntered().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-300">Remaining:</span>
+                      <span className={getRemaining() >= 0 ? "text-green-400" : "text-red-400"}>
+                        £{getRemaining().toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    type="button" 
+                    onClick={handleSplitEqually}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Split Equally
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
