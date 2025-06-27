@@ -7,11 +7,30 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Footer } from "@/components/Footer";
+import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  const { user } = useAuth();
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen flex flex-col">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/join" element={<Index />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        {user && <Footer />}
+      </div>
+    </BrowserRouter>
+  );
+};
 
 const App = () => {
   return (
@@ -21,17 +40,7 @@ const App = () => {
         <Sonner />
         <LanguageProvider>
           <AuthProvider>
-            <BrowserRouter>
-              <div className="min-h-screen flex flex-col">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/join" element={<Index />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Footer />
-              </div>
-            </BrowserRouter>
+            <AppContent />
           </AuthProvider>
         </LanguageProvider>
       </TooltipProvider>

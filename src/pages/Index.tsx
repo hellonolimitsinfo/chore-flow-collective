@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -120,7 +121,7 @@ const Index = () => {
         assigned_member_index: nextMemberIndex
       });
 
-      // Refresh the shopping items to ensure both sections are updated
+      // Force refresh the shopping items to ensure both sections are updated immediately
       await refreshItems();
       
       const nextMember = members[nextMemberIndex];

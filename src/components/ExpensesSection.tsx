@@ -1,11 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { Plus, MoreHorizontal, Trash2, CreditCard, Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +10,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { AddExpenseForm } from "./expenses/AddExpenseForm";
+import { ExpensesList } from "./expenses/ExpensesList";
+import { SettledExpensesSection } from "./expenses/SettledExpensesSection";
 
 interface ExpensesSectionProps {
   selectedHouseholdId: string | null;
@@ -59,7 +58,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
           filter: `household_id=eq.${selectedHouseholdId}`
         },
         () => {
-          // Refresh expenses and payment states when payment logs change
           refetchExpenses();
           fetchPaymentStates();
         }
@@ -159,7 +157,6 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         description: `${memberName} says they've paid for ${expense.description}`,
       });
 
-      // Refresh payment states immediately
       fetchPaymentStates();
     } catch (error) {
       console.error('Error claiming payment:', error);
@@ -192,13 +189,17 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         description: `${memberName}'s payment for ${expense.description} has been confirmed`,
       });
 
-      // Check if all debts are now settled
-      const currentStates = { ...paymentStates };
-      if (!currentStates[expense.id]) currentStates[expense.id] = {};
-      currentStates[expense.id][memberName] = 'confirmed';
+      // Fix: Manually compute updated states before checking if all confirmed
+      const updatedStates = {
+        ...paymentStates,
+        [expense.id]: {
+          ...(paymentStates[expense.id] || {}),
+          [memberName]: 'confirmed' as PaymentState
+        }
+      };
 
       const allConfirmed = expense.owed_by.every(person => 
-        currentStates[expense.id][person] === 'confirmed'
+        updatedStates[expense.id][person] === 'confirmed'
       );
 
       if (allConfirmed) {
@@ -208,7 +209,8 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         });
       }
 
-      // Refresh payment states immediately
+      // Force refetch to ensure UI updates
+      await refetchExpenses();
       fetchPaymentStates();
     } catch (error) {
       console.error('Error confirming payment:', error);
@@ -224,111 +226,18 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
     return paymentStates[expenseId]?.[memberName] || 'pending';
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }) + ', ' + date.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
-
-  const formatAmount = (amount: number) => {
-    return `£${amount.toFixed(2)}`;
-  };
-
-  const calculateOwedAmount = (expense: Expense, memberName: string) => {
-    // Check if custom amounts exist and use them
-    if (expense.custom_amounts && expense.custom_amounts[memberName] !== undefined) {
-      return expense.custom_amounts[memberName];
-    }
-    
-    // Fallback to equal split
-    return expense.amount / expense.owed_by.length;
-  };
-
   const isExpenseFullySettled = (expense: Expense) => {
     return expense.owed_by.every(person => 
       getPaymentState(expense.id, person) === 'confirmed'
     );
   };
 
-  const getSettledTime = (expenseId: string, memberName: string) => {
-    // For now, we'll show current time when settled
-    // In a real implementation, you'd store the actual settlement time
-    const now = new Date();
-    return now.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
-
-  const renderPaymentStatus = (expense: Expense, memberName: string) => {
-    const state = getPaymentState(expense.id, memberName);
-    const currentUserName = members.find(m => m.user_id === user?.id)?.full_name || 
-                           members.find(m => m.user_id === user?.id)?.email || 
-                           'Unknown';
-    const isPayer = expense.paid_by === currentUserName;
-
-    // Don't show payment button for the person who originally paid
-    if (memberName === expense.paid_by) {
-      return <Badge variant="outline" className="ml-2 text-green-600">✅ Paid</Badge>;
-    }
-
-    switch (state) {
-      case 'pending':
-        if (memberName === currentUserName) {
-          return (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleClaimPayment(expense, memberName)}
-              className="ml-2"
-            >
-              <CreditCard className="w-4 h-4 mr-1" />
-              Paid
-            </Button>
-          );
-        }
-        return <Badge variant="secondary" className="ml-2">Pending</Badge>;
-      
-      case 'claimed':
-        if (isPayer) {
-          return (
-            <div className="flex gap-1 ml-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleConfirmPayment(expense, memberName)}
-                className="text-green-600 hover:text-green-700"
-              >
-                <Check className="w-4 h-4 mr-1" />
-                Confirm
-              </Button>
-            </div>
-          );
-        }
-        return <Badge variant="outline" className="ml-2 text-yellow-600">Awaiting Confirmation</Badge>;
-      
-      case 'confirmed':
-        return (
-          <Badge variant="outline" className="ml-2 text-green-600">
-            ✅ Settled
-          </Badge>
-        );
-      
-      default:
-        return null;
-    }
-  };
-
   const activeExpenses = expenses.filter(expense => !isExpenseFullySettled(expense));
   const settledExpenses = expenses.filter(expense => isExpenseFullySettled(expense));
+
+  const currentUserName = members.find(m => m.user_id === user?.id)?.full_name || 
+                         members.find(m => m.user_id === user?.id)?.email || 
+                         'Unknown';
 
   if (!selectedHouseholdId) {
     return (
@@ -381,82 +290,15 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
               No expenses yet. Add your first expense!
             </div>
           ) : (
-            <div className="space-y-3">
-              {activeExpenses.map(expense => (
-                <div key={expense.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium text-gray-200">{expense.description}</h4>
-                        <div className="text-right">
-                          <div className="text-lg font-semibold text-green-400">
-                            {formatAmount(expense.amount)}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-400 mb-2">
-                        Paid by: {expense.paid_by}
-                      </p>
-                      <div className="text-sm text-gray-400 mb-2">
-                        Bank: {expense.bank_details}
-                      </div>
-                      <div className="text-sm text-gray-400 mb-3">
-                        Date Created: {formatDateTime(expense.created_at)}
-                      </div>
-                    </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-200">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-                        <DropdownMenuItem 
-                          onClick={() => deleteExpense(expense.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-300 mb-2">
-                      {expense.split_type === 'equal' && !expense.custom_amounts ? 'Split equally among:' : 'Owed by:'}
-                    </div>
-                    {expense.owed_by.map(person => {
-                      const state = getPaymentState(expense.id, person);
-                      const owedAmount = calculateOwedAmount(expense, person);
-                      return (
-                        <div 
-                          key={person} 
-                          className={`flex items-center justify-between p-2 rounded border ${
-                            state === 'confirmed' 
-                              ? 'bg-green-900/20 border-green-800 text-green-200' 
-                              : 'bg-gray-700/50 border-gray-600'
-                          }`}
-                        >
-                          <div className="flex flex-col">
-                            <span className={state === 'confirmed' ? 'line-through' : ''}>
-                              {person} owes {formatAmount(owedAmount)}
-                            </span>
-                            {state === 'confirmed' && (
-                              <span className="text-xs text-green-400">
-                                Settled at {getSettledTime(expense.id, person)}
-                              </span>
-                            )}
-                          </div>
-                          {renderPaymentStatus(expense, person)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ExpensesList
+              expenses={activeExpenses}
+              members={members}
+              currentUserName={currentUserName}
+              paymentStates={paymentStates}
+              onClaimPayment={handleClaimPayment}
+              onConfirmPayment={handleConfirmPayment}
+              onDeleteExpense={deleteExpense}
+            />
           )}
 
           <AddExpenseForm
@@ -469,86 +311,17 @@ export const ExpensesSection = ({ selectedHouseholdId }: ExpensesSectionProps) =
         </CardContent>
       </Card>
 
-      {/* Settled Expenses Collapsible Section */}
-      {settledExpenses.length > 0 && (
-        <Card className="bg-gray-800/80 border-gray-700">
-          <Collapsible open={settledExpensesOpen} onOpenChange={setSettledExpensesOpen}>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="pb-2 cursor-pointer hover:bg-gray-700/50 transition-colors">
-                <CardTitle className="flex items-center justify-between text-gray-100">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Settled Expenses
-                  </div>
-                  {settledExpensesOpen ? (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                  )}
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-3">
-                {settledExpenses.map(expense => (
-                  <div key={expense.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-medium text-gray-200">{expense.description}</h4>
-                          <div className="text-right">
-                            <div className="text-lg font-semibold text-green-400">
-                              {formatAmount(expense.amount)}
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-400 mb-2">
-                          Paid by: {expense.paid_by}
-                        </p>
-                        <div className="text-sm text-gray-400 mb-2">
-                          Bank: {expense.bank_details}
-                        </div>
-                        <div className="text-sm text-gray-400 mb-3">
-                          Date Created: {formatDateTime(expense.created_at)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium text-gray-300 mb-2">
-                        {expense.split_type === 'equal' && !expense.custom_amounts ? 'Split equally among:' : 'Owed by:'}
-                      </div>
-                      {expense.owed_by.map(person => {
-                        const owedAmount = calculateOwedAmount(expense, person);
-                        return (
-                          <div 
-                            key={person} 
-                            className="flex items-center justify-between p-2 rounded border bg-green-900/20 border-green-800 text-green-200"
-                          >
-                            <div className="flex flex-col">
-                              <span className="line-through">
-                                {person} owes {formatAmount(owedAmount)}
-                              </span>
-                              <span className="text-xs text-green-400">
-                                Settled at {getSettledTime(expense.id, person)}
-                              </span>
-                            </div>
-                            {person === expense.paid_by ? (
-                              <Badge variant="outline" className="ml-2 text-green-600">✅ Paid</Badge>
-                            ) : (
-                              <Badge variant="outline" className="ml-2 text-green-600">✅ Settled</Badge>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-      )}
+      <SettledExpensesSection
+        settledExpenses={settledExpenses}
+        members={members}
+        currentUserName={currentUserName}
+        paymentStates={paymentStates}
+        settledExpensesOpen={settledExpensesOpen}
+        onToggleSettledExpenses={setSettledExpensesOpen}
+        onClaimPayment={handleClaimPayment}
+        onConfirmPayment={handleConfirmPayment}
+        onDeleteExpense={deleteExpense}
+      />
     </div>
   );
 };
