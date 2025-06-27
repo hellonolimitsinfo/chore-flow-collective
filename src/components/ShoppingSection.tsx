@@ -9,6 +9,7 @@ import { ShoppingItemCard } from "@/components/shopping/ShoppingItemCard";
 import { AddShoppingItemSheet } from "@/components/shopping/AddShoppingItemSheet";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ShoppingSectionProps {
   selectedHouseholdId: string | null;
@@ -17,6 +18,7 @@ interface ShoppingSectionProps {
 
 export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: ShoppingSectionProps) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { members, loading: membersLoading } = useHouseholdMembers(selectedHouseholdId);
   const { 
     shoppingItems, 
@@ -122,7 +124,7 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
     }
     
     toast({
-      title: "Item purchased! ✅",
+      title: t('bought') + "! ✅",
       description: `${item.name} bought by ${assignedMemberName}. Now assigned to ${nextMemberName}.`,
     });
   };
@@ -145,7 +147,7 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
     }
     
     toast({
-      title: "Item flagged as low stock",
+      title: t('low_stock'),
       description: "This item has been added to urgent items needed.",
     });
   };
@@ -165,17 +167,17 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
   });
 
   const getDisabledTitle = () => {
-    if (!selectedHouseholdId) return "Select a household first";
-    if (members.length === 0) return "No household members found";
-    return "Add a new shopping item";
+    if (!selectedHouseholdId) return t('select_household_first');
+    if (members.length === 0) return t('no_household_members');
+    return t('add_item');
   };
 
   return (
     <Card className="bg-gray-800/80 border-gray-700">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="flex items-center gap-2 text-gray-100 text-lg">
+        <CardTitle className="flex items-center gap-2 text-gray-100 text-xl">
           <ShoppingCart className="h-5 w-5" />
-          Shopping Items
+          {t('shopping_items')}
         </CardTitle>
         <AddShoppingItemSheet
           isDisabled={isAddButtonDisabled}
@@ -192,25 +194,25 @@ export const ShoppingSection = ({ selectedHouseholdId, onItemUpdated }: Shopping
               className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 text-sm"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Examples
+              {t('add_examples')}
             </Button>
           </div>
         )}
         {!selectedHouseholdId ? (
           <div className="text-gray-400 text-center py-4">
-            Select a household to view shopping items
+            {t('select_household_first')} {t('shopping_items').toLowerCase()}
           </div>
         ) : members.length === 0 ? (
           <div className="text-gray-400 text-center py-4">
-            No household members found
+            {t('no_household_members')}
           </div>
         ) : loading ? (
           <div className="text-gray-400 text-center py-4">
-            Loading shopping items...
+            {t('loading')} {t('shopping_items').toLowerCase()}...
           </div>
         ) : shoppingItems.length === 0 ? (
           <div className="text-gray-400 text-center py-4">
-            No shopping items yet. Add some to get started!
+            {t('no_shopping_items_yet')}
           </div>
         ) : (
           <div className="space-y-4">

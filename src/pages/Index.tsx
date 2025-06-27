@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { useHouseholds } from "@/hooks/useHouseholds";
 import { useInvitationHandler } from "@/hooks/useInvitationHandler";
@@ -12,6 +13,7 @@ import { ShoppingSection } from "@/components/ShoppingSection";
 import { ExpensesSection } from "@/components/ExpensesSection";
 import { HistorySection } from "@/components/HistorySection";
 import { UrgentItemsSection } from "@/components/shopping/UrgentItemsSection";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useShoppingItems } from "@/hooks/useShoppingItems";
 import { useHouseholdMembers } from "@/hooks/useHouseholdMembers";
@@ -132,7 +134,7 @@ const Index = () => {
       const nextMemberName = nextMember?.full_name || nextMember?.email || 'next person';
       
       toast({
-        title: "Item purchased! ✅",
+        title: t('bought') + "! ✅",
         description: `${item.name} bought by ${assignedMemberName}. Now assigned to ${nextMemberName}.`,
       });
     } catch (error) {
@@ -148,7 +150,8 @@ const Index = () => {
   return (
     <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="p-4">
-        <div className="flex justify-end items-center mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <LanguageToggle />
           <UserMenu user={{ 
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
             email: user.email || ''

@@ -9,7 +9,7 @@ export const Footer = () => {
           href="https://forms.gle/NJMeyMWHTzQrbGHTA"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-400 hover:text-gray-300 transition-colors text-sm"
+          className="text-white hover:text-gray-300 transition-colors text-base"
         >
           Suggest a feature or improvement
         </a>

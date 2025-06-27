@@ -19,8 +19,10 @@ const translations = {
     'urgent_items': 'Urgent Items Needed',
     'history': 'History',
     'chores': 'Chores',
+    'current_chores': 'Current Chores',
     'shopping_items': 'Shopping Items',
     'expenses': 'Expenses',
+    'settled_expenses': 'Settled Expenses',
     'loading': 'Loading...',
     'just_now': 'Just now',
     'hours_ago': 'h ago',
@@ -35,7 +37,19 @@ const translations = {
     'manage_members': 'Manage Members',
     'rename_household': 'Rename Household',
     'admin': 'Admin',
-    'members': 'members'
+    'members': 'members',
+    'add_chore': 'Add Chore',
+    'add_item': 'Add Item',
+    'add_expense': 'Add Expense',
+    'add_examples': 'Add Examples',
+    'bought': 'Bought',
+    'low_stock': 'Low Stock',
+    'flagged_by_user': 'Flagged by',
+    'responsibility': 'responsibility',
+    'no_chores_yet': 'No chores yet. Add one to get started!',
+    'no_shopping_items_yet': 'No shopping items yet. Add some to get started!',
+    'select_household_first': 'Select a household to view',
+    'no_household_members': 'No household members found'
   },
   zh: {
     'flatmate_flow': '室友管理',
@@ -46,8 +60,10 @@ const translations = {
     'urgent_items': '急需物品',
     'history': '历史记录',
     'chores': '家务',
+    'current_chores': '当前家务',
     'shopping_items': '购物清单',
     'expenses': '支出',
+    'settled_expenses': '已结算支出',
     'loading': '加载中...',
     'just_now': '刚刚',
     'hours_ago': '小时前',
@@ -62,7 +78,19 @@ const translations = {
     'manage_members': '管理成员',
     'rename_household': '重命名家庭',
     'admin': '管理员',
-    'members': '成员'
+    'members': '成员',
+    'add_chore': '添加家务',
+    'add_item': '添加物品',
+    'add_expense': '添加支出',
+    'add_examples': '添加示例',
+    'bought': '已购买',
+    'low_stock': '库存不足',
+    'flagged_by_user': '标记者',
+    'responsibility': '的责任',
+    'no_chores_yet': '还没有家务。添加一个开始吧！',
+    'no_shopping_items_yet': '还没有购物清单。添加一些开始吧！',
+    'select_household_first': '先选择一个家庭来查看',
+    'no_household_members': '未找到家庭成员'
   }
 };
 
