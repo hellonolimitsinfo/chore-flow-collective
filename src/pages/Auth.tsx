@@ -28,6 +28,12 @@ const Auth = () => {
       console.log('Stored invitation parameters:', { inviteEmail, householdId });
     }
 
+    // Store token for processing after authentication
+    if (token) {
+      localStorage.setItem('pending_invite_token', token);
+      console.log('Stored invite token:', token);
+    }
+
     // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();

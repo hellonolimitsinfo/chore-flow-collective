@@ -160,6 +160,7 @@ export type Database = {
           amount: number
           bank_details: string
           created_at: string
+          custom_amounts: Json | null
           description: string
           household_id: string
           id: string
@@ -172,6 +173,7 @@ export type Database = {
           amount: number
           bank_details: string
           created_at?: string
+          custom_amounts?: Json | null
           description: string
           household_id: string
           id?: string
@@ -184,6 +186,7 @@ export type Database = {
           amount?: number
           bank_details?: string
           created_at?: string
+          custom_amounts?: Json | null
           description?: string
           household_id?: string
           id?: string

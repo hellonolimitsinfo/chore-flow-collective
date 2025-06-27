@@ -12,8 +12,20 @@ export const useInvitationHandler = () => {
   
   useEffect(() => {
     const handleInvitation = async () => {
-      // Check for token-based invitations first
-      const token = searchParams.get('token');
+      if (loading) return; // wait until auth is done loading
+      
+      // Check for token-based invitations first (from either /auth or /join routes)
+      let token = searchParams.get('token');
+      
+      // Also check localStorage for token from auth redirect
+      if (!token) {
+        const storedToken = localStorage.getItem('pending_invite_token');
+        if (storedToken) {
+          token = storedToken;
+          localStorage.removeItem('pending_invite_token');
+          console.log('Retrieved token from localStorage:', token);
+        }
+      }
       
       // Then check URL parameters for email-based invitations
       let inviteEmail = searchParams.get('invite_email');
@@ -38,12 +50,11 @@ export const useInvitationHandler = () => {
       // Handle token-based invitations
       if (token) {
         console.log('Processing token-based invitation:', { token });
-
-        if (loading) return; // wait until auth is done loading
         
-        // If user is not logged in, redirect to auth page with token preserved
+        // If user is not logged in, store token and redirect to auth page
         if (!user) {
-          console.log('User not authenticated, redirecting to auth page with token');
+          console.log('User not authenticated, storing token and redirecting to auth page');
+          localStorage.setItem('pending_invite_token', token);
           navigate(`/auth?token=${token}`);
           return;
         }
@@ -114,6 +125,9 @@ export const useInvitationHandler = () => {
               .from('pending_invites')
               .delete()
               .eq('id', token);
+            
+            // Navigate to home
+            navigate('/');
             return;
           }
 
@@ -156,6 +170,9 @@ export const useInvitationHandler = () => {
             .eq('id', token);
 
           setSearchParams(new URLSearchParams());
+          
+          // Navigate to home after successful join
+          navigate('/');
           return;
 
         } catch (error) {
@@ -173,8 +190,6 @@ export const useInvitationHandler = () => {
       }
       
       console.log('Processing email-based invitation:', { inviteEmail, householdId, userEmail: user?.email });
-
-      if (loading) return; // wait until auth is done loading
       
       // If user is not logged in, redirect to auth page with invitation params preserved
       if (!user) {
@@ -274,9 +289,7 @@ export const useInvitationHandler = () => {
       }
     };
     
-    // Only run if we have a user or invitation parameters
-    if (user || searchParams.get('invite_email') || searchParams.get('token') || localStorage.getItem('pending_invitation')) {
-      handleInvitation();
-    }
+    // Run the handler when we have necessary conditions
+    handleInvitation();
   }, [user, searchParams, setSearchParams, navigate, loading]);
 };
